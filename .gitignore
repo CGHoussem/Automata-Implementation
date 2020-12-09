@@ -1,0 +1,6 @@
+# vscode files
+.vscode
+
+# c objects && executable
+*.o
+program
