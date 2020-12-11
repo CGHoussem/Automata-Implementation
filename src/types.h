@@ -1,11 +1,18 @@
 #ifndef TYPES_H
 #define TYPE_H
 
+typedef enum _bool bool;
+
 typedef unsigned int uint;
 
 // typedef struct _Etat Etat;
 typedef struct _Transition Transition;
 typedef struct _AFN AFN;
+
+enum _bool {
+    FALSE = 0,
+    TRUE = 1
+};
 
 // struct _Etat
 // {

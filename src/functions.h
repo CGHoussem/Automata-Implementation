@@ -4,9 +4,10 @@
 #include "types.h"
 
 AFN automate_vide();
+AFN automate_mot_vide();
+AFN automate_mot(char);
+AFN automate_reunion(AFN, AFN);
 
-AFN automate_mot(char caractere);
-
-void dump_automate(AFN automate);
+void dump_automate(AFN);
 
 #endif

@@ -6,9 +6,11 @@
 
 int main(int argc, char** argv) 
 {
-    AFN afn = automate_mot('a');
+    AFN afn_a = automate_mot('a');
+    AFN afn_b = automate_mot('b');
 
-    dump_automate(afn);
+    AFN afn_r = automate_reunion(afn_a, afn_b);
+    dump_automate(afn_r);
 
     return EXIT_SUCCESS;
 }

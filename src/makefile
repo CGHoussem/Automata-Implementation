@@ -19,3 +19,6 @@ main.o: main.c
 
 functions.o: functions.c
 	$(GCC) $(CFLAGS) -c -o functions.o functions.c
+
+clean:
+	rm $(OBJS) program
