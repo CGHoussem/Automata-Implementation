@@ -1,6 +1,8 @@
 #ifndef TYPES_H
 #define TYPE_H
 
+#define ASCII_LENGTH    128
+
 typedef enum _bool bool;
 
 typedef unsigned int uint;

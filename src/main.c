@@ -10,7 +10,12 @@ int main(int argc, char** argv)
     AFN afn_b = automate_mot('b');
 
     AFN afn_r = automate_reunion(afn_a, afn_b);
-    dump_automate(afn_r);
+    AFN afn_c = automate_concat(afn_a, afn_b);
+
+    // dump_automate(afn_r);
+    dump_automate(afn_b);
+
+
 
     return EXIT_SUCCESS;
 }

@@ -7,6 +7,7 @@ AFN automate_vide();
 AFN automate_mot_vide();
 AFN automate_mot(char);
 AFN automate_reunion(AFN, AFN);
+AFN automate_concat(AFN, AFN);
 
 void dump_automate(AFN);
 
