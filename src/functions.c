@@ -240,6 +240,56 @@ AFN automate_concat(AFN automate1, AFN automate2) {
     return automate;
 }
 
+AFN automate_kleene(AFN automate_src) {
+    AFN automate;
+
+    // L'ensemble des états de l'automate
+    automate.q = NULL;
+    automate.q_size = 0;
+    append_Q_to_AFN(&automate, automate_src, TRUE);
+
+    // L'état initial
+    automate.s = automate_src.s;
+
+    // L'ensemble des états accepteurs de l'automate
+    automate.f = (Etat**) malloc(sizeof(Etat*));
+    automate.f_size = 1;
+    *(automate.f) = automate.s;
+    append_F_to_AFN(&automate, automate_src, FALSE);
+
+    // L'ensemble des transitions de l'automate
+    automate.delta = NULL;
+    automate.delta_size = 0;
+    // copie de delta de l'automate source (automate_src) dans delta de l'automate destinataire (automate)
+    for (size_t j = 0; j < automate_src.delta_size; j++) {
+        Transition t;
+        t.e1 = (automate_src.delta+j)->e1;
+        t.e2 = (automate_src.delta+j)->e2;
+        t.alphabet = (automate_src.delta+j)->alphabet;
+        automate.delta = (Transition*) realloc(automate.delta, sizeof(Transition) * (automate.delta_size + 1));
+        *(automate.delta+automate.delta_size) = t;
+        automate.delta_size += 1;
+    }
+    // 
+    for (size_t i = 0; i < automate_src.f_size; i++) {
+        Etat* f1 = *(automate_src.f+i);
+        for (size_t j = 0; j < automate_src.delta_size; j++) {
+            Transition t;
+            t.e1 = (automate_src.delta+j)->e1;
+            t.e2 = (automate_src.delta+j)->e2;
+            t.alphabet = (automate_src.delta+j)->alphabet;
+            if (t.e1 == automate_src.s) { 
+                t.e1 = f1;
+                automate.delta = (Transition*) realloc(automate.delta, sizeof(Transition) * (automate.delta_size + 1));
+                *(automate.delta+automate.delta_size) = t;
+                automate.delta_size += 1;
+            }
+        }
+    }
+
+    return automate;
+}
+
 /**
  * Cette fonction permet d'afficher le quintuplet d'un automate.
  * 

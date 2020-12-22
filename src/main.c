@@ -13,11 +13,14 @@ int main(int argc, char** argv)
 
     // AFN afn_r = automate_reunion(afn_a, afn_b);
     AFN afn_c = automate_concat(afn_a, afn_b);
+    AFN afn_c_star = automate_kleene(afn_c);
 
-    dump_automate(afn_a);
-    dump_automate(afn_b);
+
+    // dump_automate(afn_a);
+    // dump_automate(afn_b);
     // dump_automate(afn_r);
     dump_automate(afn_c);
+    dump_automate(afn_c_star);
 
     // TODO: add free automate functions
 
