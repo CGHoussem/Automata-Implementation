@@ -1,5 +1,5 @@
 #ifndef TYPES_H
-#define TYPE_H
+#define TYPES_H
 
 #define ASCII_LENGTH    128
 
@@ -7,7 +7,7 @@ typedef enum _bool bool;
 
 typedef unsigned int uint;
 
-// typedef struct _Etat Etat;
+typedef struct _Etat Etat;
 typedef struct _Transition Transition;
 typedef struct _AFN AFN;
 
@@ -16,25 +16,24 @@ enum _bool {
     TRUE = 1
 };
 
-// struct _Etat
-// {
-//     uint _index;            // Identifiant de l'état
-// };
+struct _Etat
+{
+    uint _index;            // Identifiant de l'état
+};
 
 struct _Transition 
 {
-    uint e1;                // Identifiant de l'état 1
-    uint e2;                // Identifiant de l'état 2
-    char alphabet;          // L'alphabet liant
+    Etat* e1;               // L'état 1
+    Etat* e2;               // L'état 2
+    char alphabet;          // L'alphabet liant les deux états
 };
 
 struct _AFN
 {
-    uint* q;                // Ensemble fini des identifiants des états
+    Etat** q;               // Ensemble fini des états
     uint q_size;            // La taille des états
-    char alphabet;          // L'alphabet de l'automate
-	uint s;                 // L'identifiant de l'état initial de l'automate
-	uint* f;                // Ensemble des identifiants des états accepteurs de l'automate
+	Etat* s;                // L'état initial de l'automate
+	Etat** f;               // Ensemble des états accepteurs de l'automate
 	uint f_size;            // La taille des états finaux
 
 	Transition* delta;      // Les transitions

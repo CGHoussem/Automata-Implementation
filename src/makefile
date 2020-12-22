@@ -1,6 +1,6 @@
 GCC = gcc
 CFLAGS = -std=c99 -Wall
-OBJS = functions.o main.o
+OBJS = functions.o extra_func.o main.o
 
 
 debug: CFLAGS += -g -Og
@@ -20,5 +20,8 @@ main.o: main.c
 functions.o: functions.c
 	$(GCC) $(CFLAGS) -c -o functions.o functions.c
 
+extra_func.o: extra_func.c
+	$(GCC) $(CFLAGS) -c -o extra_func.o extra_func.c
+
 clean:
-	rm $(OBJS) program
+	rm -rf $(OBJS) program
