@@ -3,10 +3,10 @@ CFLAGS = -std=c99 -Wall
 OBJS = functions.o extra_func.o main.o
 
 
-debug: CFLAGS += -g -Og
+debug: CFLAGS += -g -Og -D DEBUG=1
 debug: all
 
-release: CFLAGS += -O1
+release: CFLAGS += -O1 -D DEBUG=0
 release: all
 
 all: program

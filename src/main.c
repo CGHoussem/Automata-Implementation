@@ -11,16 +11,20 @@ int main(int argc, char** argv)
     AFN afn_a = automate_mot('a');
     AFN afn_b = automate_mot('b');
 
-    // AFN afn_r = automate_reunion(afn_a, afn_b);
-    AFN afn_c = automate_concat(afn_a, afn_b);
-    AFN afn_c_star = automate_kleene(afn_c);
-
+    AFN afn_r = automate_reunion(afn_a, afn_b);
+    // AFN afn_c = automate_concat(afn_a, afn_b);
+    // AFN afn_c_star = automate_kleene(afn_c);
 
     // dump_automate(afn_a);
     // dump_automate(afn_b);
     // dump_automate(afn_r);
-    dump_automate(afn_c);
-    dump_automate(afn_c_star);
+    // dump_automate(afn_c_star);
+
+    AFD afd_r = determiniser_AFN(afn_r);
+
+
+    afficherAFN(afn_r);
+    afficherAFD(afd_r);
 
     // TODO: add free automate functions
 

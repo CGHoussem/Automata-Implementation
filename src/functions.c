@@ -1,10 +1,15 @@
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 
 #include "extra_func.h"
 #include "functions.h"
 
-// TODO: Check for alphabet use in the structure
+/**
+ * ######################
+ *  LES FONCTIONS de AFN
+ * ######################
+ **/
 
 /**
  * Cette fonction permet de renvoyer un automate
@@ -291,11 +296,201 @@ AFN automate_kleene(AFN automate_src) {
 }
 
 /**
+ * ######################
+ *  LES FONCTIONS de AFD
+ * ######################
+ **/
+
+void execute_AFD(AFD automate, char* str) {
+    Etat* state = automate.s; 
+    for (size_t i = 0; i < strlen(str); i++) {
+        char c = *(str+i);
+        // trouver toutes les transitions où on peut passer par le alphabet 'c'
+        // si on ne trouve pas de transitions alors l'automate ne peut pas déteceter la chaine de caractère
+        // TODO: to complete
+    }
+}
+
+AFD determiniser_AFN(AFN automate_src) {
+    AFD automate;
+
+    // L'état initial
+    automate.s = automate_src.s;
+    
+    // L'ensemble des états Q
+    automate.q_size = 1;
+    automate.q = (EtatCompose*) malloc(sizeof(EtatCompose));
+    *(automate.q) = compose_state(automate.s);
+    
+    // L'ensemble des états F
+    automate.f = NULL;
+    automate.f_size = 0;
+
+    // L'ensemble des transitions
+    automate.sigma = NULL;
+    automate.sigma_size = 0;
+
+    for (size_t i = 0; i < automate.q_size; i++) {
+        EtatCompose etatcomp = *(automate.q+i);
+        #if DEBUG==1
+        printf("PROCESSING Q[%ld] = %p\n", i, etatcomp._etats[0]);
+        #endif
+        EtatCompose etats_composes[ASCII_LENGTH];
+        for (size_t j = 0; j < ASCII_LENGTH; j++) {
+            etats_composes[j]._etats = NULL;
+            etats_composes[j]._size = 0;
+        }
+        uint etats_composes_size[ASCII_LENGTH];
+        for (size_t j = 0; j < ASCII_LENGTH; j++)
+            etats_composes_size[j] = 0;
+
+        for (size_t j = 0; j < etatcomp._size; j++) {
+            Etat* state = *(etatcomp._etats+j);
+
+            // list of pointers to transitions
+            Transition** transitions = get_transitions_from_AFN(automate_src, state);
+            
+            size_t pt = 0;
+            Transition *t = NULL;
+
+            // Composer un état
+            while ((t = *(transitions+pt))!= NULL) {
+                int alpha = (int) (t->alphabet);
+                #if DEBUG==1
+                printf("\tTransition FOUND from %p to %p\t(%c)\n", state, t->e2, (char)alpha);
+                #endif
+                // compose or append the etatscompose
+                etats_composes[alpha]._etats = (Etat**) malloc(sizeof(Etat*) * (etats_composes_size[alpha] + 1));
+                etats_composes[alpha]._etats[etats_composes_size[alpha]] = t->e2;
+                etats_composes[alpha]._size = etats_composes_size[alpha] + 1;
+                etats_composes_size[alpha]++;
+
+                // increment for loop
+                pt += 1;
+            }
+            #if DEBUG==1
+            if (pt == 0) {
+                printf("\tNo transitions FOUND from %p\n", state);
+            }
+            printf("\n");
+            #endif
+        }
+
+        // Ajout de l'état composé s'il n'existe pas
+        for (size_t alpha = 0; alpha < ASCII_LENGTH; alpha++) {
+            if (etats_composes_size[alpha] != 0) {
+                EtatCompose new_etatcomp = etats_composes[alpha];    
+                #if DEBUG==1             
+                printf("Transition to (%c) composed with %d state(s)\n", (char)alpha, new_etatcomp._size);
+                #endif
+                if (existe_etatcompose_AFD_Q(automate, new_etatcomp) == FALSE) {
+                    // add new_etatcomp to automate.q
+                    #if DEBUG==1
+                    printf("\tAJOUT de (%p) dans Q[%d]\n", new_etatcomp._etats[0], automate.q_size);
+                    #endif
+                    automate.q = (EtatCompose*) realloc(automate.q, sizeof(EtatCompose) * (automate.q_size + 1));
+                    *(automate.q+automate.q_size) = new_etatcomp;
+                    automate.q_size++;
+
+                    // create a transition from 'etatcomp' to 'new_etatcomp' by 'alpha'
+                    AFDTransition new_t;
+                    new_t.e1 = etatcomp;
+                    new_t.e2 = new_etatcomp;
+                    new_t.alphabet = (char)alpha;
+                    #if DEBUG==1
+                    printf("\tAJOUT de ");
+                    printf("(");
+                    if (new_t.e1._size == 1)
+                        printf("%p", new_t.e1._etats[0]);
+                    else {
+                        printf("{");
+                        for (size_t j = 0; j < new_t.e1._size; j++) {
+                            printf("%p, ", new_t.e1._etats[j]);
+                        }
+                        printf("}, ");
+                    }
+                    printf(", %c, ", new_t.alphabet);
+                    
+                    if (new_t.e2._size == 1)
+                        printf("%p", new_t.e2._etats[0]);
+                    else {
+                        printf("{");
+                        for (size_t j = 0; j < new_t.e2._size; j++) {
+                            printf("%p, ", new_t.e2._etats[j]);
+                        }
+                        printf("}, ");
+                    }
+                    printf(") dans SIGMA\n");
+                    #endif
+
+                    automate.sigma = (AFDTransition*) realloc(automate.sigma, sizeof(AFDTransition) * (automate.sigma_size + 1));
+                    automate.sigma[automate.sigma_size] = new_t;
+                    automate.sigma_size++;
+                }
+                #if DEBUG==1
+                printf("\n");
+                #endif
+            }
+        }
+    }
+
+    // L'ensemble des états finaux
+    automate.f = NULL;
+    automate.f_size = 0;
+    // find each composed_state in the newly created Q' and set that composed_state as a final state
+    for (size_t i = 0; i < automate_src.f_size; i++) {
+        Etat* ref_state = *(automate_src.f+i);
+
+        for (size_t j = 0; j < automate.q_size; j++) {
+            EtatCompose etatcomp = *(automate.q+j);
+            for (size_t y = 0; y < etatcomp._size; y++) {
+                if (ref_state->_index == etatcomp._etats[y]->_index) {
+                    // add this composed state in F'
+                    automate.f = (EtatCompose*) realloc(automate.f, sizeof(EtatCompose) * (automate.f_size + 1));
+                    automate.f[automate.f_size]._etats = etatcomp._etats;
+                    automate.f[automate.f_size]._size = etatcomp._size;
+                    automate.f_size++;
+                }
+            }
+        }
+    }
+
+    return automate;
+}
+
+AFD minimiser_AFN(AFD automate_src) {
+    AFD automate;
+    
+    // L'etat initial
+    automate.s = NULL;
+
+    // L'ensemble des états
+    automate.q = NULL;
+    automate.q_size = 0;
+
+    // L'ensemble des états finaux
+    automate.f = NULL;
+    automate.f_size = 0;
+
+    // L'ensemble des transitions
+    automate.sigma = NULL;
+    automate.sigma_size = 0;
+
+    return automate;
+}
+
+/**
+ * ######################
+ *    AUTRES FONCTIONS 
+ * ######################
+ **/
+
+/**
  * Cette fonction permet d'afficher le quintuplet d'un automate.
  * 
  * @param automate: L'automate AFN a afficher.
  **/ 
-void dump_automate(AFN automate) {
+void afficherAFN(AFN automate) {
     size_t i;
     printf("Q = {");
     for (i = 0; i < automate.q_size; i++) {
@@ -320,6 +515,73 @@ void dump_automate(AFN automate) {
         char alpha = (automate.delta+i)->alphabet;
         
         printf("(%p, %c, %p), ", e1, alpha, e2);
+    }
+    printf("}\n\n");
+}
+
+void afficherAFD(AFD automate) {
+    size_t i;
+    printf("Q' = {");
+    for (size_t i = 0; i < automate.q_size; i++) {
+        EtatCompose etatcomp = automate.q[i];
+        if (etatcomp._size == 1)
+            printf("%p, ", *(etatcomp._etats));
+        else {
+            printf("{");
+            for (size_t j = 0; j < etatcomp._size; j++) {
+                printf("%p, ", *(etatcomp._etats+j));
+            }
+            printf("}, ");
+        }
+    }
+    printf("}\n");
+
+    printf("s = %p\n", automate.s);
+
+    printf("F' = {");
+    for (size_t i = 0; i < automate.f_size; i++) {
+        EtatCompose etatcomp = automate.f[i];
+        if (etatcomp._size == 1)
+            printf("%p, ", *(etatcomp._etats));
+        else {
+            printf("{");
+            for (size_t j = 0; j < etatcomp._size; j++) {
+                printf("%p, ", *(etatcomp._etats+j));
+            }
+            printf("}, ");
+        }
+    }
+    printf("}\n");
+
+    printf("delta = {");
+    for (i = 0; i < automate.sigma_size; i++) {
+        EtatCompose e1 = (automate.sigma+i)->e1;
+        EtatCompose e2 = (automate.sigma+i)->e2;
+        char alpha = (automate.sigma+i)->alphabet;
+        
+        printf("(");
+        if (e1._size == 1)
+            printf("%p", e1._etats[0]);
+        else {
+            printf("{");
+            for (size_t j = 0; j < e1._size; j++) {
+                printf("%p, ", e1._etats[j]);
+            }
+            printf("}, ");
+        }
+
+        printf(", %c, ", alpha);
+
+        if (e2._size == 1)
+            printf("%p, ", e2._etats[0]);
+        else {
+            printf("{");
+            for (size_t j = 0; j < e2._size; j++) {
+                printf("%p, ", e2._etats[j]);
+            }
+            printf("}, ");
+        }
+        printf("), ");
     }
     printf("}\n\n");
 }

@@ -10,6 +10,11 @@ AFN automate_reunion(AFN, AFN);
 AFN automate_concat(AFN, AFN);
 AFN automate_kleene(AFN);
 
-void dump_automate(AFN);
+void execute_AFD(AFD, char*);
+AFD determiniser_AFN(AFN);
+AFD minimiser_AFN(AFD);
+
+void afficherAFN(AFN);
+void afficherAFD(AFD);
 
 #endif
