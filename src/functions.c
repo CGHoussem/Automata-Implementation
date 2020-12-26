@@ -101,7 +101,7 @@ AFN automate_mot(char caractere) {
 
     // Initialisation des transitions de l'automate
     automate.delta_size = 1;
-    automate.delta = (Transition*) malloc(sizeof(Transition));
+    automate.delta = (AFNTransition*) malloc(sizeof(AFNTransition));
     (automate.delta)->e1 = etat;
     (automate.delta)->e2 = etat_dest;
     (automate.delta)->alphabet = caractere;
@@ -203,23 +203,23 @@ AFN automate_concat(AFN automate1, AFN automate2) {
     automate.delta_size = 0;    
 
     for (size_t i = 0; i < automate1.delta_size; i++) {
-        Transition t;
+        AFNTransition t;
         t.e1 = (automate1.delta+i)->e1;
         t.e2 = (automate1.delta+i)->e2;
         t.alphabet = (automate1.delta+i)->alphabet;
-        automate.delta = (Transition*) realloc(automate.delta, sizeof(Transition) * (automate.delta_size + 1));
+        automate.delta = (AFNTransition*) realloc(automate.delta, sizeof(AFNTransition) * (automate.delta_size + 1));
         *(automate.delta+automate.delta_size) = t;
         automate.delta_size += 1;
     }
 
     // Copie de toutes les transitions de delta2 qui ne sortent pas de l'état initial 
     for (size_t i = 0; i < automate2.delta_size; i++) {
-        Transition t;
+        AFNTransition t;
         t.e1 = (automate2.delta+i)->e1;
         t.e2 = (automate2.delta+i)->e2;
         t.alphabet = (automate2.delta+i)->alphabet;
         if (t.e1 != automate2.s) { // si l'état p n'est pas s
-            automate.delta = (Transition*) realloc(automate.delta, sizeof(Transition) * (automate.delta_size + 1));
+            automate.delta = (AFNTransition*) realloc(automate.delta, sizeof(AFNTransition) * (automate.delta_size + 1));
             *(automate.delta+automate.delta_size) = t;
             automate.delta_size += 1;
         }
@@ -229,13 +229,13 @@ AFN automate_concat(AFN automate1, AFN automate2) {
     for (size_t i = 0; i < automate1.f_size; i++) {
         Etat* f1 = *(automate1.f+i);
         for (size_t j = 0; j < automate2.delta_size; j++) {
-            Transition t;
+            AFNTransition t;
             t.e1 = (automate2.delta+j)->e1;
             t.e2 = (automate2.delta+j)->e2;
             t.alphabet = (automate2.delta+j)->alphabet;
             if (t.e1 == automate2.s) { 
                 t.e1 = f1;
-                automate.delta = (Transition*) realloc(automate.delta, sizeof(Transition) * (automate.delta_size + 1));
+                automate.delta = (AFNTransition*) realloc(automate.delta, sizeof(AFNTransition) * (automate.delta_size + 1));
                 *(automate.delta+automate.delta_size) = t;
                 automate.delta_size += 1;
             }
@@ -267,11 +267,11 @@ AFN automate_kleene(AFN automate_src) {
     automate.delta_size = 0;
     // copie de delta de l'automate source (automate_src) dans delta de l'automate destinataire (automate)
     for (size_t j = 0; j < automate_src.delta_size; j++) {
-        Transition t;
+        AFNTransition t;
         t.e1 = (automate_src.delta+j)->e1;
         t.e2 = (automate_src.delta+j)->e2;
         t.alphabet = (automate_src.delta+j)->alphabet;
-        automate.delta = (Transition*) realloc(automate.delta, sizeof(Transition) * (automate.delta_size + 1));
+        automate.delta = (AFNTransition*) realloc(automate.delta, sizeof(AFNTransition) * (automate.delta_size + 1));
         *(automate.delta+automate.delta_size) = t;
         automate.delta_size += 1;
     }
@@ -279,13 +279,13 @@ AFN automate_kleene(AFN automate_src) {
     for (size_t i = 0; i < automate_src.f_size; i++) {
         Etat* f1 = *(automate_src.f+i);
         for (size_t j = 0; j < automate_src.delta_size; j++) {
-            Transition t;
+            AFNTransition t;
             t.e1 = (automate_src.delta+j)->e1;
             t.e2 = (automate_src.delta+j)->e2;
             t.alphabet = (automate_src.delta+j)->alphabet;
             if (t.e1 == automate_src.s) { 
                 t.e1 = f1;
-                automate.delta = (Transition*) realloc(automate.delta, sizeof(Transition) * (automate.delta_size + 1));
+                automate.delta = (AFNTransition*) realloc(automate.delta, sizeof(AFNTransition) * (automate.delta_size + 1));
                 *(automate.delta+automate.delta_size) = t;
                 automate.delta_size += 1;
             }
@@ -302,12 +302,31 @@ AFN automate_kleene(AFN automate_src) {
  **/
 
 void execute_AFD(AFD automate, char* str) {
-    Etat* state = automate.s; 
+    EtatCompose state = automate.s;
     for (size_t i = 0; i < strlen(str); i++) {
         char c = *(str+i);
-        // trouver toutes les transitions où on peut passer par le alphabet 'c'
-        // si on ne trouve pas de transitions alors l'automate ne peut pas déteceter la chaine de caractère
-        // TODO: to complete
+        // trouver toutes les transitions où on peut passer par l'alphabet 'c'
+        // si on trouve une transition alors
+        //      on passe par cet transition et on mets à jour (state)
+        // si on ne trouve pas de transitions alors 
+        //      l'automate ne peut pas détecter la chaine de caractère
+        AFDTransition* t = NULL;
+        AFDTransition** transitions = get_transitions_from_AFD_EtatComp(automate, state);
+        AFDTransition* t_pointer = NULL;
+        uint t_pos = 0;
+        while ( ((t_pointer = transitions[t_pos++]) != NULL) && (t == NULL)){
+            // chercher la transition avec l'alphabet 'c'
+            if (t_pointer->alphabet == c)
+                t = t_pointer;
+        }
+
+        if (t == NULL) {
+            printf("AUCUNE TRANSITION TROUVEE!\n");
+            break;
+        } else {
+            printf("%c -> ACCEPTE\n", c);
+            state = t->e2;
+        }
     }
 }
 
@@ -315,16 +334,15 @@ AFD determiniser_AFN(AFN automate_src) {
     AFD automate;
 
     // L'état initial
-    automate.s = automate_src.s;
+    automate.s = *compose_state(automate_src.s);
+    #if DEBUG==1
+    printf("automate.s index : %d\n", automate.s._index);
+    #endif
     
     // L'ensemble des états Q
     automate.q_size = 1;
     automate.q = (EtatCompose*) malloc(sizeof(EtatCompose));
-    *(automate.q) = compose_state(automate.s);
-    
-    // L'ensemble des états F
-    automate.f = NULL;
-    automate.f_size = 0;
+    *(automate.q) = automate.s;
 
     // L'ensemble des transitions
     automate.sigma = NULL;
@@ -337,6 +355,7 @@ AFD determiniser_AFN(AFN automate_src) {
         #endif
         EtatCompose etats_composes[ASCII_LENGTH];
         for (size_t j = 0; j < ASCII_LENGTH; j++) {
+            etats_composes[j]._index = rand();
             etats_composes[j]._etats = NULL;
             etats_composes[j]._size = 0;
         }
@@ -348,10 +367,10 @@ AFD determiniser_AFN(AFN automate_src) {
             Etat* state = *(etatcomp._etats+j);
 
             // list of pointers to transitions
-            Transition** transitions = get_transitions_from_AFN(automate_src, state);
+            AFNTransition** transitions = get_transitions_from_AFN(automate_src, state);
             
             size_t pt = 0;
-            Transition *t = NULL;
+            AFNTransition *t = NULL;
 
             // Composer un état
             while ((t = *(transitions+pt))!= NULL) {
@@ -447,6 +466,7 @@ AFD determiniser_AFN(AFN automate_src) {
                 if (ref_state->_index == etatcomp._etats[y]->_index) {
                     // add this composed state in F'
                     automate.f = (EtatCompose*) realloc(automate.f, sizeof(EtatCompose) * (automate.f_size + 1));
+                    automate.f[automate.f_size]._index = etatcomp._index;
                     automate.f[automate.f_size]._etats = etatcomp._etats;
                     automate.f[automate.f_size]._size = etatcomp._size;
                     automate.f_size++;
@@ -461,20 +481,159 @@ AFD determiniser_AFN(AFN automate_src) {
 AFD minimiser_AFN(AFD automate_src) {
     AFD automate;
     
-    // L'etat initial
-    automate.s = NULL;
+    // Liste des ensembles des états (séparés)
+    EtatCompose** groupes = NULL;
+    // Taille de la liste
+    uint taille_groupes = 2;
+    // Liste des tailles des ensembles
+    uint* taille_listes = NULL;
+    // Initialisation des deux premiers ensembles
+    groupes = (EtatCompose**) malloc(sizeof(EtatCompose*) * taille_groupes);
+    groupes[0] = (EtatCompose*) malloc(sizeof(EtatCompose));
+    groupes[1] = (EtatCompose*) malloc(sizeof(EtatCompose));
+    taille_listes = (uint*) malloc(sizeof(uint) * 2);
+    taille_listes[0] = 0;
+    taille_listes[1] = 0;
 
-    // L'ensemble des états
-    automate.q = NULL;
+    // Etape 0 (séparation des états accepteurs des autres)
+    /**
+     * Pour chaque étatcomposé dans Q de l'automate, on vérifie:
+     *      si l'étatcomp est accepteur alors 
+     *          on l'ajoute dans liste[0] (etatcompose*)
+     *      sinon
+     *          on l'ajoute dans liste[1]
+     **/ 
+    #if DEBUG==1
+    printf("P0: séparation entre les états accepteurs et non accepteurs\n");
+    #endif
+    for (size_t i = 0; i < automate_src.q_size; i++) {
+        EtatCompose e = automate_src.q[i];
+        // vérification si 'e' est un etat accepteur ou pas
+        if (existe_etatcompose_AFD_F(automate_src, e) == TRUE) {
+            // e est un état accepteur
+            groupes[1] = (EtatCompose*) realloc(groupes[1], sizeof(EtatCompose) * (taille_listes[1] + 1));
+            groupes[1][taille_listes[1]] = e;
+            taille_listes[1]++;
+        } else {
+            // e n'est pas un état accepteur
+            groupes[0] = (EtatCompose*) realloc(groupes[0], sizeof(EtatCompose) * (taille_listes[0] + 1));
+            groupes[0][taille_listes[0]] = e;
+            taille_listes[0]++;
+        }
+    }
+
+    // Etapes k (séparation des états)
+    #if DEBUG==1
+    printf("Pk: séparation des groupes entre eux\n");
+    #endif
+    for (size_t i = 0; i < taille_groupes; i++) {
+        EtatCompose* groupe = groupes[i];
+        uint taille_groupe = taille_listes[i];
+        if (taille_groupe > 1) {
+            for (size_t j = 0; j < taille_groupe; j++) {
+                EtatCompose etat_compose = groupe[j];
+                LEtatCompose destinations = get_destinations_from_EtatCompose_AFD(automate_src, etat_compose);
+                for (size_t y = 0; y < destinations.taille; y++) {
+                    EtatCompose dest_state = destinations.etats[y];
+                    /**
+                     * Si (dest_state) est inclut dans le groupe i, on ne fait rien
+                     * Sinon, on sépare le group i en prenant (dest_state) et l'isolant dans un autre groupe
+                     **/ 
+                    // 1ére étape: vérification si (dest_state) est inclut ou pas dans le groupe i
+                    if (est_inclut_dans_groupe(dest_state, groupe, taille_groupe) == FALSE) {
+                        // 2éme étape: Si oui, on crée un autre groupe et on l'ajoute dans la liste
+                        EtatCompose* new_group = (EtatCompose*) malloc(sizeof(EtatCompose));
+                        new_group[0] = etat_compose;
+                        groupes[taille_groupes] = new_group;
+                        taille_listes = (uint*) realloc(taille_listes, sizeof(uint) * (taille_groupes + 1));
+                        taille_listes[taille_groupes++] = 1;
+                        #if DEBUG==1
+                        printf("\tCreated a new group for state %d\n", etat_compose._index);
+                        #endif
+                        // 3éme étape: Et, on retire (etat) du groupe i
+                        groupe = retirer_etat_groupe(etat_compose, groupe, &taille_groupe);
+                    }
+                }
+            }
+        }
+    }
+    #if DEBUG == 1
+    printf("\nThere are %d groupes\n", taille_groupes);
+    for (size_t i = 0; i < taille_groupes; i++) {
+        EtatCompose* groupe = groupes[i];
+        uint taille_groupe = taille_listes[i];
+        printf("GROUP %ld\n", i);
+        for (size_t j = 0; j < taille_groupe; j++) {
+            EtatCompose etat_compose = groupe[j];
+            printf("\t%d\n", etat_compose._index);
+        }
+        printf("-----------------\n");
+    }
+    #endif
+
+    // L'état initial et les ensembles des états & des états finaux & des transitions
+    automate.q = (EtatCompose*) malloc(sizeof(EtatCompose) * taille_groupes);
     automate.q_size = 0;
-
-    // L'ensemble des états finaux
     automate.f = NULL;
     automate.f_size = 0;
-
-    // L'ensemble des transitions
     automate.sigma = NULL;
     automate.sigma_size = 0;
+    for (size_t i = 0; i < taille_groupes; i++) {
+        EtatCompose* groupe = groupes[i];
+        uint taille_groupe = taille_listes[i];
+        
+        // make a new state composed of all the states in the group
+        EtatCompose new_state = compose_state_from_group(groupe, taille_groupe);
+
+        // if the initial state is in the group then make the group the initial state
+        if (est_inclut_dans_groupe(automate_src.s, groupe, taille_groupe) == TRUE) {
+            automate.s = new_state;
+        }
+
+        // add new_state in Q
+        #if DEBUG==1
+        printf("ADDING composed state to Q [");
+        for (size_t j = 0; j < new_state._size; j++) {
+            printf("%d, ", new_state._etats[j]->_index);
+        }
+        printf("]\n\n");
+        #endif
+        automate.q[automate.q_size++] = new_state;
+        
+        // check if in the new_state has a final state in it
+        if (has_final_state(new_state, automate_src) == TRUE) {
+            // add new_state in F
+            automate.f = (EtatCompose*) realloc(automate.f, sizeof(EtatCompose) * (automate.f_size  + 1));
+            automate.f[automate.f_size++] = new_state;
+        }
+    }
+
+    // transitions
+    for (size_t i = 0; i < automate.q_size; i++) {
+        EtatCompose ec = automate.q[i];
+        for (size_t j = 0; j < ec._size; j++) {
+            #if DEBUG==1
+            printf("LOOKING FOR TRANSITIONS OF %d\n", ec._etats[j]->_index);
+            #endif
+            AFDTransition** liste_transitions = get_transitions_from_AFD(automate_src, ec._etats[j]);
+            AFDTransition* current_t = NULL;
+            uint current_p = 0;
+            while ((current_t = liste_transitions[current_p++]) != NULL)
+            {
+                AFDTransition new_t;
+                new_t.alphabet = current_t->alphabet;
+                new_t.e1 = ec;
+                new_t.e2 = *get_group(current_t->e2, groupes, taille_groupes, taille_listes);
+                #if DEBUG==1
+                printf("\n");
+                printf("adding (%d, %c, %d)\n", new_state._index, current_t->alphabet, current_t->e2._index);
+                #endif
+                // add new_t to sigma
+                automate.sigma = (AFDTransition*) realloc(automate.sigma, sizeof(AFDTransition) * (automate.sigma_size + 1));
+                automate.sigma[automate.sigma_size++] = new_t;
+            }
+        }
+    }
 
     return automate;
 }
@@ -524,32 +683,16 @@ void afficherAFD(AFD automate) {
     printf("Q' = {");
     for (size_t i = 0; i < automate.q_size; i++) {
         EtatCompose etatcomp = automate.q[i];
-        if (etatcomp._size == 1)
-            printf("%p, ", *(etatcomp._etats));
-        else {
-            printf("{");
-            for (size_t j = 0; j < etatcomp._size; j++) {
-                printf("%p, ", *(etatcomp._etats+j));
-            }
-            printf("}, ");
-        }
+        printf("%d, ", etatcomp._index);
     }
     printf("}\n");
 
-    printf("s = %p\n", automate.s);
+    printf("s = %d\n", automate.s._index);
 
     printf("F' = {");
     for (size_t i = 0; i < automate.f_size; i++) {
         EtatCompose etatcomp = automate.f[i];
-        if (etatcomp._size == 1)
-            printf("%p, ", *(etatcomp._etats));
-        else {
-            printf("{");
-            for (size_t j = 0; j < etatcomp._size; j++) {
-                printf("%p, ", *(etatcomp._etats+j));
-            }
-            printf("}, ");
-        }
+        printf("%d, ", etatcomp._index);
     }
     printf("}\n");
 
@@ -559,29 +702,7 @@ void afficherAFD(AFD automate) {
         EtatCompose e2 = (automate.sigma+i)->e2;
         char alpha = (automate.sigma+i)->alphabet;
         
-        printf("(");
-        if (e1._size == 1)
-            printf("%p", e1._etats[0]);
-        else {
-            printf("{");
-            for (size_t j = 0; j < e1._size; j++) {
-                printf("%p, ", e1._etats[j]);
-            }
-            printf("}, ");
-        }
-
-        printf(", %c, ", alpha);
-
-        if (e2._size == 1)
-            printf("%p, ", e2._etats[0]);
-        else {
-            printf("{");
-            for (size_t j = 0; j < e2._size; j++) {
-                printf("%p, ", e2._etats[j]);
-            }
-            printf("}, ");
-        }
-        printf("), ");
+        printf("(%d, %c, %d), ", e1._index, alpha, e2._index);
     }
     printf("}\n\n");
 }
