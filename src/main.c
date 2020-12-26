@@ -9,15 +9,18 @@ int main(int argc, char** argv)
     srand(time(NULL));
 
     AFN afn_a = automate_mot('a');
-    AFN afn_b = automate_mot('b');
 
-    AFN afn_r = automate_reunion(afn_a, afn_b);
+    AFN afn_a_s = automate_kleene(afn_a);
 
-    AFD afd_r = determiniser_AFN(afn_r);
+    afficherAFN(afn_a_s);
+
+    AFD afd_r = determiniser_AFN(afn_a_s);
     afficherAFD(afd_r);
 
-    AFD afd_r_min = minimiser_AFN(afd_r);
-    afficherAFD(afd_r_min);
+    AFD afd_r_m = minimiser_AFD(afd_r);
+    afficherAFD(afd_r_m);
+
+    execute_AFD(afd_r, "aaaa");
 
     // TODO: free automates
 

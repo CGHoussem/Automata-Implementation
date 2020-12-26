@@ -12,7 +12,7 @@ AFN automate_kleene(AFN);
 
 void execute_AFD(AFD, char*);
 AFD determiniser_AFN(AFN);
-AFD minimiser_AFN(AFD);
+AFD minimiser_AFD(AFD);
 
 void afficherAFN(AFN);
 void afficherAFD(AFD);

@@ -144,7 +144,8 @@ AFN automate_reunion(AFN automate1, AFN automate2) {
     automate.f_size = 0;
     if (is_state_final(automate1, automate1.s) == TRUE || is_state_final(automate2, automate2.s) == TRUE) {
         automate.f_size = 1;
-        *(automate.f) = automate.s;
+        automate.f = (Etat**) malloc(sizeof(Etat*));
+        automate.f[0] = automate.s;
         append_F_to_AFN(&automate, automate1, FALSE);
         append_F_to_AFN(&automate, automate2, FALSE);
     } else {
@@ -303,7 +304,8 @@ AFN automate_kleene(AFN automate_src) {
 
 void execute_AFD(AFD automate, char* str) {
     EtatCompose state = automate.s;
-    for (size_t i = 0; i < strlen(str); i++) {
+    bool compatible = TRUE;
+    for (size_t i = 0; (compatible == TRUE) && (i < strlen(str)); i++) {
         char c = *(str+i);
         // trouver toutes les transitions où on peut passer par l'alphabet 'c'
         // si on trouve une transition alors
@@ -321,12 +323,20 @@ void execute_AFD(AFD automate, char* str) {
         }
 
         if (t == NULL) {
-            printf("AUCUNE TRANSITION TROUVEE!\n");
-            break;
+            printf("AUTOMATE NON COMPATIBLE!\n");
+            printf("> pas de transition trouvee pour le caractere!\n");
+            printf("\tchaine: '%s'\n", str);
+            printf("\tcaractere: '%c'\n", c);
+            printf("\tpos: %ld\n", i);
+            
+            compatible = FALSE;
         } else {
-            printf("%c -> ACCEPTE\n", c);
             state = t->e2;
         }
+    }
+
+    if (compatible == TRUE) {
+        printf("AUTOMATE COMPATIBLE\n");
     }
 }
 
@@ -478,7 +488,7 @@ AFD determiniser_AFN(AFN automate_src) {
     return automate;
 }
 
-AFD minimiser_AFN(AFD automate_src) {
+AFD minimiser_AFD(AFD automate_src) {
     AFD automate;
     
     // Liste des ensembles des états (séparés)
@@ -626,7 +636,7 @@ AFD minimiser_AFN(AFD automate_src) {
                 new_t.e2 = *get_group(current_t->e2, groupes, taille_groupes, taille_listes);
                 #if DEBUG==1
                 printf("\n");
-                printf("adding (%d, %c, %d)\n", new_state._index, current_t->alphabet, current_t->e2._index);
+                printf("adding (%d, %c, %d)\n", ec._index, current_t->alphabet, current_t->e2._index);
                 #endif
                 // add new_t to sigma
                 automate.sigma = (AFDTransition*) realloc(automate.sigma, sizeof(AFDTransition) * (automate.sigma_size + 1));
@@ -654,7 +664,7 @@ void afficherAFN(AFN automate) {
     printf("Q = {");
     for (i = 0; i < automate.q_size; i++) {
         Etat* e = *(automate.q+i);
-        printf("%p, ", e);
+        printf("%d, ", e->_index);
     }
     printf("}\n");
 
@@ -663,7 +673,7 @@ void afficherAFN(AFN automate) {
     printf("F = {");
     for (i = 0; i < automate.f_size; i++) {
         Etat* e = *(automate.f+i);
-        printf("%p, ", e);
+        printf("%d, ", e->_index);
     }
     printf("}\n");
 
@@ -673,7 +683,7 @@ void afficherAFN(AFN automate) {
         Etat* e2 = (automate.delta+i)->e2;
         char alpha = (automate.delta+i)->alphabet;
         
-        printf("(%p, %c, %p), ", e1, alpha, e2);
+        printf("(%d, %c, %d), ", e1->_index, alpha, e2->_index);
     }
     printf("}\n\n");
 }
