@@ -76,6 +76,29 @@ AFNTransition** get_transitions_from_AFN(AFN automate_src, Etat* state_src) {
     return ret;
 }
 
+AFNTransition** get_transitions_from_AFN_of_char(AFN automate_src, Etat* state_src, char alpha) {
+    // Cette liste devra être parcouru jusqu'a l'atteint du pointeur NULL
+    AFNTransition** ret = NULL;
+    uint ret_size = 0;
+
+    for (size_t i = 0; i < automate_src.delta_size; i++) {
+        AFNTransition t = *(automate_src.delta+i);
+        if (state_src == t.e1 && t.alphabet==alpha) {
+            ret = (AFNTransition**) realloc(ret, sizeof(AFNTransition*) * (ret_size + 1));
+            *(ret+ret_size) = automate_src.delta+i;
+            ret_size += 1;
+        }
+    }
+
+    // La fin de la liste
+    if (ret_size > 0) {
+        ret = (AFNTransition**) realloc(ret, sizeof(AFNTransition*) * (ret_size + 1));
+        *(ret+ret_size) = NULL;
+    }
+
+    return ret;
+}
+
 AFDTransition** get_transitions_from_AFD_EtatComp(AFD automate_src, EtatCompose state_src) {
     // Cette liste devra être parcouru jusqu'a l'atteint du pointeur NULL
     AFDTransition** ret = NULL;
@@ -192,11 +215,6 @@ bool existe_etatcompose_AFD_Q(AFD automate_src, EtatCompose etats_src) {
         if (ret == TRUE) {
             return TRUE;
         }
-        // printf("CHECK %p && %p\n", etats_src._etats, etatcomp->_etats);
-        // if (etats_src._etats == etatcomp->_etats) {
-        //     printf("FOUND!!!!\n");
-        //     return TRUE;
-        // }
     }
     return FALSE;
 }
@@ -212,6 +230,58 @@ bool existe_etatcompose_AFD_F(AFD automate_src, EtatCompose etatcompose_src) {
     }
 
     return FALSE;
+}
+
+bool existe_etatcompose_liste(EtatCompose etat, EtatCompose* liste, uint taille) {
+    if (taille == 0)
+        return FALSE;
+
+    for (size_t i = 0; i < taille; i++) {
+        EtatCompose ec = liste[i];
+        
+        // si les tailles ne sont pas égaux, c'est même pas la peine de vérifier le reste
+        if (ec._size != etat._size)
+            continue;
+
+        bool ret = TRUE;
+        for (size_t j = 0; j < ec._size; j++) {
+            if (ec._etats[j]->_index != etat._etats[j]->_index) {
+                ret = FALSE;
+                break;
+            }
+        }
+
+        if (ret == TRUE)
+            return TRUE;
+    }
+
+    return FALSE;
+}
+
+EtatCompose* get_equivalent_etatcompose_liste(EtatCompose etat, EtatCompose* liste, uint taille) {
+    if (taille == 0)
+        return NULL;
+
+    for (size_t i = 0; i < taille; i++) {
+        EtatCompose* ec = (liste+i);
+        
+        // si les tailles ne sont pas égaux, c'est même pas la peine de vérifier le reste
+        if (ec->_size != etat._size)
+            continue;
+
+        bool ret = TRUE;
+        for (size_t j = 0; j < ec->_size; j++) {
+            if (ec->_etats[j]->_index != etat._etats[j]->_index) {
+                ret = FALSE;
+                break;
+            }
+        }
+
+        if (ret == TRUE)
+            return ec;
+    }
+
+    return NULL;
 }
 
 bool est_inclut_dans_groupe(EtatCompose etat, EtatCompose* groupe, uint taille) {
@@ -246,7 +316,7 @@ EtatCompose* compose_state(Etat* state) {
     EtatCompose* etat_s = (EtatCompose*) malloc(sizeof(EtatCompose));
     etat_s->_index = rand();
     etat_s->_etats = (Etat**) malloc(sizeof(Etat*));
-    *(etat_s->_etats) = state;
+    etat_s->_etats[0] = state;
     etat_s->_size = 1;
     return etat_s;
 }

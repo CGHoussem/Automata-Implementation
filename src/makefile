@@ -2,12 +2,11 @@ GCC = gcc
 CFLAGS = -std=c99 -Wall
 OBJS = functions.o extra_func.o main.o
 
+release: CFLAGS += -O1 -D DEBUG=0
+release: all
 
 debug: CFLAGS += -g -Og -D DEBUG=1
 debug: all
-
-release: CFLAGS += -O1 -D DEBUG=0
-release: all
 
 all: program
 

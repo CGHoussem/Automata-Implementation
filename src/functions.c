@@ -324,166 +324,340 @@ void execute_AFD(AFD automate, char* str) {
 
         if (t == NULL) {
             printf("AUTOMATE NON COMPATIBLE!\n");
-            printf("> pas de transition trouvee pour le caractere!\n");
+            printf("> Il n'existe pas de transition pour '%c' a partir de l'etat %d\n", c, state._index);
             printf("\tchaine: '%s'\n", str);
             printf("\tcaractere: '%c'\n", c);
-            printf("\tpos: %ld\n", i);
+            printf("\tpos de blocage: %ld\n", i+1);
             
             compatible = FALSE;
         } else {
             state = t->e2;
         }
     }
-
     if (compatible == TRUE) {
-        printf("AUTOMATE COMPATIBLE\n");
+        if (existe_etatcompose_AFD_F(automate, state) == TRUE) 
+            printf("AUTOMATE COMPATIBLE\n");
+        else {
+            printf("AUTOMATE NON COMPATIBLE!\n");
+            printf("> Le dernier etat n'est pas un etat accepteur!\n");
+            printf("\tchaine: '%s'\n", str);
+            printf("\tcaractere: '%c'\n", str[strlen(str)-1]);
+            printf("\tpos de blocage: %ld\n", strlen(str));
+        }
     }
 }
 
 AFD determiniser_AFN(AFN automate_src) {
     AFD automate;
 
-    // L'état initial
-    automate.s = *compose_state(automate_src.s);
+    // temp Q
+    EtatCompose* temp_q = (EtatCompose*) malloc(sizeof(EtatCompose));
+    uint temp_q_size = 1;
+    temp_q[0] = *compose_state(automate_src.s);
+
+    // pour chaque état composé dans temp_q
+    for (size_t i = 0; i < temp_q_size; i++) {
+        EtatCompose qi = temp_q[i];
+        // pour chaque état dans qi
+        for (size_t j = 0; j < qi._size; j++) {
+            Etat* qij = qi._etats[j];
+            // pour chaque alphabet dans la langage
+            for (size_t c = 0; c < ASCII_LENGTH; c++) {
+                // on regarde toutes les transitions vers l'alphabet 'c'
+                AFNTransition** transitions = get_transitions_from_AFN_of_char(automate_src, qij, (char)c);
+                if (transitions != NULL) {
+                    uint length = 0;
+                    size_t p = 0;
+                    AFNTransition* t = NULL;
+                    // calcul combien il existe de transitions de l'état à partir du caractere 'c'
+                    while ((t = transitions[p++]) != NULL) length++;
+                    #if DEBUG==1
+                    printf("FOUND %d transitions for %c\n", length, (char)c);
+                    #endif
+                    if (length <= 1) {
+                        // on vérifie si l'état composé existe déja dans le temp_q
+                        EtatCompose ec = *compose_state(transitions[0]->e2);
+                        if (existe_etatcompose_liste(ec, temp_q, temp_q_size) == FALSE) {
+                            // on ajoute directement l'état à temp_q
+                            #if DEBUG==1
+                            printf("AJOUT de %d dans Q_temp %d\n", ec._index, temp_q->_index);
+                            #endif
+                            temp_q = (EtatCompose*) realloc(temp_q, sizeof(EtatCompose) * (temp_q_size + 1));
+                            temp_q[temp_q_size++] = ec;
+                        }
+                    }
+                    else {
+                        // on compose un seul état de toutes les états destinataires
+                        AFNTransition* t = NULL;
+                        p = 0;
+                        EtatCompose temp;
+                        temp._index = rand();
+                        temp._etats = (Etat**) malloc(sizeof(Etat*) * length);
+                        while ((t = transitions[p++]) != NULL) {
+                            temp._etats[temp._size++] = t->e2;
+                        }
+                        // on vérifie si l'état composé existe déja dans le temp_q
+                        if (existe_etatcompose_liste(temp, temp_q, temp_q_size) == FALSE) {
+                            // ajoute l'état composé à temp_q
+                            #if DEBUG==1
+                            printf("AJOUT de %d dans Q_temp %d\n", temp._index, temp_q->_index);
+                            #endif
+                            temp_q = (EtatCompose*) realloc(temp_q, sizeof(EtatCompose) * (temp_q_size + 1));
+                            temp_q[temp_q_size++] = temp;
+                        }
+                    }
+                }
+            }
+        }
+    }
+
     #if DEBUG==1
-    printf("automate.s index : %d\n", automate.s._index);
+    printf("==============TEMP============\n");
+    printf("Q temp: [");
+    for (size_t i = 0; i < temp_q_size; i++) {
+        EtatCompose ec = temp_q[i];
+        printf("[%d](", ec._index);
+        for (size_t j = 0; j < ec._size; j++) {
+            printf("%d, ", ec._etats[j]->_index);
+        }
+        printf("), ");
+    }
+    printf("]\n");
     #endif
     
-    // L'ensemble des états Q
-    automate.q_size = 1;
-    automate.q = (EtatCompose*) malloc(sizeof(EtatCompose));
-    *(automate.q) = automate.s;
-
-    // L'ensemble des transitions
-    automate.sigma = NULL;
-    automate.sigma_size = 0;
-
-    for (size_t i = 0; i < automate.q_size; i++) {
-        EtatCompose etatcomp = *(automate.q+i);
-        #if DEBUG==1
-        printf("PROCESSING Q[%ld] = %p\n", i, etatcomp._etats[0]);
-        #endif
-        EtatCompose etats_composes[ASCII_LENGTH];
-        for (size_t j = 0; j < ASCII_LENGTH; j++) {
-            etats_composes[j]._index = rand();
-            etats_composes[j]._etats = NULL;
-            etats_composes[j]._size = 0;
-        }
-        uint etats_composes_size[ASCII_LENGTH];
-        for (size_t j = 0; j < ASCII_LENGTH; j++)
-            etats_composes_size[j] = 0;
-
-        for (size_t j = 0; j < etatcomp._size; j++) {
-            Etat* state = *(etatcomp._etats+j);
-
-            // list of pointers to transitions
-            AFNTransition** transitions = get_transitions_from_AFN(automate_src, state);
-            
-            size_t pt = 0;
-            AFNTransition *t = NULL;
-
-            // Composer un état
-            while ((t = *(transitions+pt))!= NULL) {
-                int alpha = (int) (t->alphabet);
-                #if DEBUG==1
-                printf("\tTransition FOUND from %p to %p\t(%c)\n", state, t->e2, (char)alpha);
-                #endif
-                // compose or append the etatscompose
-                etats_composes[alpha]._etats = (Etat**) malloc(sizeof(Etat*) * (etats_composes_size[alpha] + 1));
-                etats_composes[alpha]._etats[etats_composes_size[alpha]] = t->e2;
-                etats_composes[alpha]._size = etats_composes_size[alpha] + 1;
-                etats_composes_size[alpha]++;
-
-                // increment for loop
-                pt += 1;
+    EtatCompose temp_s;
+    temp_s._etats = NULL;
+    temp_s._size = 0;
+    temp_s._index = 0;
+    // trouver temp_s
+    for (size_t i = 0; i < temp_q_size; i++) {
+        EtatCompose ec = temp_q[i];
+        if (ec._size == 1) {
+            if (ec._etats[0] == automate_src.s) {
+                temp_s = ec;
+                break;
             }
-            #if DEBUG==1
-            if (pt == 0) {
-                printf("\tNo transitions FOUND from %p\n", state);
-            }
-            printf("\n");
-            #endif
         }
+    }
+    // to obscure 'maybe used uninitialized' warning
+    if (temp_s._etats == NULL){
+        exit(1);
+    }
 
-        // Ajout de l'état composé s'il n'existe pas
-        for (size_t alpha = 0; alpha < ASCII_LENGTH; alpha++) {
-            if (etats_composes_size[alpha] != 0) {
-                EtatCompose new_etatcomp = etats_composes[alpha];    
-                #if DEBUG==1             
-                printf("Transition to (%c) composed with %d state(s)\n", (char)alpha, new_etatcomp._size);
-                #endif
-                if (existe_etatcompose_AFD_Q(automate, new_etatcomp) == FALSE) {
-                    // add new_etatcomp to automate.q
-                    #if DEBUG==1
-                    printf("\tAJOUT de (%p) dans Q[%d]\n", new_etatcomp._etats[0], automate.q_size);
-                    #endif
-                    automate.q = (EtatCompose*) realloc(automate.q, sizeof(EtatCompose) * (automate.q_size + 1));
-                    *(automate.q+automate.q_size) = new_etatcomp;
-                    automate.q_size++;
+    #if DEBUG==1
+    printf("s temp: [%d](", temp_s._index);
+    for (size_t j = 0; j < temp_s._size; j++) {
+        printf("%d, ", temp_s._etats[j]->_index);
+    }
+    printf(")\n");
+    #endif
 
-                    // create a transition from 'etatcomp' to 'new_etatcomp' by 'alpha'
+    // trouver f
+    EtatCompose* temp_f = NULL;
+    uint temp_f_size = 0;
+    for (size_t i = 0; i < temp_q_size; i++) {
+        EtatCompose ec = temp_q[i];
+        bool done = FALSE;
+        for (size_t j = 0; (done==FALSE) && (j < ec._size); j++) {
+            Etat* e = ec._etats[j];
+            if (is_state_final(automate_src, e) == TRUE){
+                temp_f = (EtatCompose*) realloc(temp_f, sizeof(EtatCompose) * (temp_f_size + 1));
+                temp_f[temp_f_size++] = ec;
+                done = TRUE;
+            }
+        }
+    }
+
+    #if DEBUG==1
+    printf("F temp: [");
+    for (size_t i = 0; i < temp_f_size; i++) {
+        EtatCompose ec = temp_f[i];
+        printf("[%d](", ec._index);
+        for (size_t j = 0; j < ec._size; j++) {
+            printf("%d, ", ec._etats[j]->_index);
+        }
+        printf("), ");
+    }
+    printf("]\n");
+    #endif
+
+    // les transitions
+    AFDTransition* temp_sigma = NULL;
+    uint temp_sigma_size = 0;
+    for (size_t i = 0; i < temp_q_size; i++) {
+        EtatCompose ec = temp_q[i];
+
+        // look for all transitions of ec._etats in the AFN
+        for (size_t j = 0; j < ec._size; j++) {
+            Etat* e1 = ec._etats[j];
+            AFNTransition** transitions = get_transitions_from_AFN(automate_src, e1);
+
+            // for each transition, we take E2 and search its equivalent in temp_q and LINK
+            AFNTransition* current_t = NULL;
+            uint current_p = 0;
+            while ((current_t = transitions[current_p++]) != NULL) {
+                EtatCompose temp = *compose_state(current_t->e2);
+                EtatCompose* eq = get_equivalent_etatcompose_liste(temp, temp_q, temp_q_size);
+                if (eq != NULL) {
+                    // LINK: make a transition between ec and eq by current_t.alphabet
                     AFDTransition new_t;
-                    new_t.e1 = etatcomp;
-                    new_t.e2 = new_etatcomp;
-                    new_t.alphabet = (char)alpha;
-                    #if DEBUG==1
-                    printf("\tAJOUT de ");
-                    printf("(");
-                    if (new_t.e1._size == 1)
-                        printf("%p", new_t.e1._etats[0]);
-                    else {
-                        printf("{");
-                        for (size_t j = 0; j < new_t.e1._size; j++) {
-                            printf("%p, ", new_t.e1._etats[j]);
-                        }
-                        printf("}, ");
-                    }
-                    printf(", %c, ", new_t.alphabet);
+                    new_t.e1 = ec;
+                    new_t.e2 = *eq;
+                    new_t.alphabet = current_t->alphabet;
+                    temp_sigma = (AFDTransition*) realloc(temp_sigma, sizeof(AFDTransition) * (temp_sigma_size + 1));
+                    temp_sigma[temp_sigma_size] = new_t;
+                    temp_sigma_size++;
+                }
+            }
+        }    
+    }
+
+    #if DEBUG==1
+    printf("sigma = {");
+    for (size_t i = 0; i < temp_sigma_size; i++) {
+        EtatCompose e1 = (temp_sigma+i)->e1;
+        EtatCompose e2 = (temp_sigma+i)->e2;
+        char alpha = (temp_sigma+i)->alphabet;
+        
+        printf("(%d, %c, %d), ", e1._index, alpha, e2._index);
+    }
+    printf("}\n");
+    printf("==============TEMP============\n");
+    printf("\n\n");
+    #endif
+
+    automate.s = temp_s;
+    automate.q = temp_q;
+    automate.q_size = temp_q_size;
+    automate.f = temp_f;
+    automate.f_size = temp_f_size;
+    automate.sigma = temp_sigma;
+    automate.sigma_size = temp_sigma_size;
+
+    // L'état initial
+    // automate.s = *compose_state(automate_src.s);
+    
+    // // L'ensemble des états Q
+    // automate.q_size = 1;
+    // automate.q = (EtatCompose*) malloc(sizeof(EtatCompose));
+    // *(automate.q) = automate.s;
+
+    // // L'ensemble des transitions
+    // automate.sigma = NULL;
+    // automate.sigma_size = 0;
+
+    // for (size_t i = 0; i < automate.q_size; i++) {
+    //     EtatCompose etatcomp = *(automate.q+i);
+    //     #if DEBUG==1
+    //     printf("PROCESSING Q[%ld] = %p\n", i, etatcomp._etats[0]);
+    //     #endif
+    //     EtatCompose etats_composes[ASCII_LENGTH];
+    //     for (size_t j = 0; j < ASCII_LENGTH; j++) {
+    //         etats_composes[j]._index = rand();
+    //         etats_composes[j]._etats = NULL;
+    //         etats_composes[j]._size = 0;
+    //     }
+    //     uint etats_composes_size[ASCII_LENGTH];
+    //     for (size_t j = 0; j < ASCII_LENGTH; j++)
+    //         etats_composes_size[j] = 0;
+
+    //     for (size_t j = 0; j < etatcomp._size; j++) {
+    //         Etat* state = *(etatcomp._etats+j);
+
+    //         // list of pointers to transitions
+    //         AFNTransition** transitions = get_transitions_from_AFN(automate_src, state);
+            
+    //         size_t pt = 0;
+    //         AFNTransition *t = NULL;
+
+    //         // Composer un état
+    //         while ((t = *(transitions+pt))!= NULL) {
+    //             int alpha = (int) (t->alphabet);
+    //             #if DEBUG==1
+    //             printf("\tTransition FOUND from %p to %p\t(%c)\n", state, t->e2, (char)alpha);
+    //             #endif
+    //             // compose or append the etatscompose
+    //             etats_composes[alpha]._etats = (Etat**) malloc(sizeof(Etat*) * (etats_composes_size[alpha] + 1));
+    //             etats_composes[alpha]._etats[etats_composes_size[alpha]] = t->e2;
+    //             etats_composes[alpha]._size = etats_composes_size[alpha] + 1;
+    //             etats_composes_size[alpha]++;
+
+    //             // increment for loop
+    //             pt += 1;
+    //         }
+    //         #if DEBUG==1
+    //         if (pt == 0) {
+    //             printf("\tNo transitions FOUND from %p\n", state);
+    //         }
+    //         printf("\n");
+    //         #endif
+    //     }
+
+    //     // Ajout de l'état composé s'il n'existe pas
+    //     for (size_t alpha = 0; alpha < ASCII_LENGTH; alpha++) {
+    //         if (etats_composes_size[alpha] != 0) {
+    //             EtatCompose new_etatcomp = etats_composes[alpha];    
+    //             #if DEBUG==1             
+    //             printf("Transition to (%c) composed with %d state(s)\n", (char)alpha, new_etatcomp._size);
+    //             #endif
+    //             if (existe_etatcompose_AFD_Q(automate, new_etatcomp) == FALSE) {
+    //                 // add new_etatcomp to automate.q
+    //                 #if DEBUG==1
+    //                 printf("\tAJOUT de (%p) dans Q[%d]\n", new_etatcomp._etats[0], automate.q_size);
+    //                 #endif
+    //                 automate.q = (EtatCompose*) realloc(automate.q, sizeof(EtatCompose) * (automate.q_size + 1));
+    //                 automate.q[automate.q_size++] = new_etatcomp;
+    //             }
+    //             // create a transition from 'etatcomp' to 'new_etatcomp' by 'alpha'
+    //                 AFDTransition new_t;
+    //                 new_t.e1 = etatcomp;
+    //                 new_t.e2 = new_etatcomp;
+    //                 new_t.alphabet = (char)alpha;
+    //                 #if DEBUG==1
+    //                 printf("\tAJOUT de ");
+    //                 printf("({");
+    //                 for (size_t j = 0; j < new_t.e1._size; j++) {
+    //                     printf("%d, ", new_t.e1._etats[j]->_index);
+    //                 }
+    //                 printf("}, %c, {", new_t.alphabet);
                     
-                    if (new_t.e2._size == 1)
-                        printf("%p", new_t.e2._etats[0]);
-                    else {
-                        printf("{");
-                        for (size_t j = 0; j < new_t.e2._size; j++) {
-                            printf("%p, ", new_t.e2._etats[j]);
-                        }
-                        printf("}, ");
-                    }
-                    printf(") dans SIGMA\n");
-                    #endif
+    //                 for (size_t j = 0; j < new_t.e2._size; j++) {
+    //                     printf("%d, ", new_t.e2._etats[j]->_index);
+    //                 }
+    //                 printf("}) dans SIGMA\n");
+    //                 #endif
 
-                    automate.sigma = (AFDTransition*) realloc(automate.sigma, sizeof(AFDTransition) * (automate.sigma_size + 1));
-                    automate.sigma[automate.sigma_size] = new_t;
-                    automate.sigma_size++;
-                }
-                #if DEBUG==1
-                printf("\n");
-                #endif
-            }
-        }
-    }
+    //                 automate.sigma = (AFDTransition*) realloc(automate.sigma, sizeof(AFDTransition) * (automate.sigma_size + 1));
+    //                 automate.sigma[automate.sigma_size] = new_t;
+    //                 automate.sigma_size++;
+    //             #if DEBUG==1
+    //             printf("\n");
+    //             #endif
+    //         }
+    //     }
+    // }
 
-    // L'ensemble des états finaux
-    automate.f = NULL;
-    automate.f_size = 0;
-    // find each composed_state in the newly created Q' and set that composed_state as a final state
-    for (size_t i = 0; i < automate_src.f_size; i++) {
-        Etat* ref_state = *(automate_src.f+i);
+    // // L'ensemble des états finaux
+    // automate.f = NULL;
+    // automate.f_size = 0;
+    // // find each composed_state in the newly created Q' and set that composed_state as a final state
+    // for (size_t i = 0; i < automate_src.f_size; i++) {
+    //     Etat* ref_state = *(automate_src.f+i);
 
-        for (size_t j = 0; j < automate.q_size; j++) {
-            EtatCompose etatcomp = *(automate.q+j);
-            for (size_t y = 0; y < etatcomp._size; y++) {
-                if (ref_state->_index == etatcomp._etats[y]->_index) {
-                    // add this composed state in F'
-                    automate.f = (EtatCompose*) realloc(automate.f, sizeof(EtatCompose) * (automate.f_size + 1));
-                    automate.f[automate.f_size]._index = etatcomp._index;
-                    automate.f[automate.f_size]._etats = etatcomp._etats;
-                    automate.f[automate.f_size]._size = etatcomp._size;
-                    automate.f_size++;
-                }
-            }
-        }
-    }
+    //     for (size_t j = 0; j < automate.q_size; j++) {
+    //         EtatCompose etatcomp = *(automate.q+j);
+    //         for (size_t y = 0; y < etatcomp._size; y++) {
+    //             if (ref_state->_index == etatcomp._etats[y]->_index) {
+    //                 // add this composed state in F'
+    //                 automate.f = (EtatCompose*) realloc(automate.f, sizeof(EtatCompose) * (automate.f_size + 1));
+    //                 automate.f[automate.f_size]._index = etatcomp._index;
+    //                 automate.f[automate.f_size]._etats = etatcomp._etats;
+    //                 automate.f[automate.f_size]._size = etatcomp._size;
+    //                 automate.f_size++;
+    //             }
+    //         }
+    //     }
+    // }
 
     return automate;
 }
@@ -668,7 +842,7 @@ void afficherAFN(AFN automate) {
     }
     printf("}\n");
 
-    printf("s = %p\n", automate.s);
+    printf("s = %d\n", automate.s->_index);
 
     printf("F = {");
     for (i = 0; i < automate.f_size; i++) {
@@ -706,7 +880,7 @@ void afficherAFD(AFD automate) {
     }
     printf("}\n");
 
-    printf("delta = {");
+    printf("sigma = {");
     for (i = 0; i < automate.sigma_size; i++) {
         EtatCompose e1 = (automate.sigma+i)->e1;
         EtatCompose e2 = (automate.sigma+i)->e2;

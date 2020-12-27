@@ -9,18 +9,23 @@ int main(int argc, char** argv)
     srand(time(NULL));
 
     AFN afn_a = automate_mot('a');
-
     AFN afn_a_s = automate_kleene(afn_a);
+    AFN afn_b = automate_mot('b');
 
-    afficherAFN(afn_a_s);
+    AFN afn_r = automate_concat(afn_a_s, afn_b);
+    printf("\nAFN (a*b)\n");
+    afficherAFN(afn_r);
 
-    AFD afd_r = determiniser_AFN(afn_a_s);
+    printf("\nAFN determinisé\n");
+    AFD afd_r = determiniser_AFN(afn_r);
     afficherAFD(afd_r);
 
+    execute_AFD(afd_r, "aaaa");
+
+    // TODO les transitions de la minimisation
+    printf("\nAFD minimisé\n");
     AFD afd_r_m = minimiser_AFD(afd_r);
     afficherAFD(afd_r_m);
-
-    execute_AFD(afd_r, "aaaa");
 
     // TODO: free automates
 
