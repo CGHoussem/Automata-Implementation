@@ -310,6 +310,30 @@ bool has_final_state(EtatCompose etat, AFD automate_src) {
     return FALSE;
 }
 
+bool is_lec_same(LEtatCompose liste1, LEtatCompose liste2) {
+    if (liste1.taille != liste2.taille)
+        return FALSE;
+    for (size_t i = 0; i < liste1.taille; i++) {
+        if (liste1.etats[i]._index != liste2.etats[i]._index)
+            return FALSE;
+    }
+    return TRUE;
+}
+
+bool does_afdtransition_exist(AFDTransition transition_src, AFDTransition* liste, uint taille) {
+    if (taille <= 0 || liste == NULL) return FALSE;
+    for (size_t i = 0; i < taille; i++) {
+        AFDTransition transition = liste[i];
+        if (
+            transition_src.e1._index == transition.e1._index &&
+            transition_src.e2._index == transition.e2._index &&
+            transition_src.alphabet == transition.alphabet
+        )
+            return TRUE;
+    }
+    return FALSE;
+}
+
 EtatCompose* compose_state(Etat* state) {
     if (state == NULL)
         return NULL;
@@ -322,36 +346,37 @@ EtatCompose* compose_state(Etat* state) {
 }
 
 EtatCompose compose_state_from_group(EtatCompose* liste, uint taille) {
-    EtatCompose etat;
-
-    etat._index = rand();
-    etat._size = 0;
-    etat._etats = NULL;
+    EtatCompose etat = {._index = rand(), ._size = 0, ._etats = NULL};
 
     #if DEBUG==1
-    printf("COMPOSING a state from group %d [", liste->_index);
+    printf("\nCOMPOSING a state from group %d [", liste->_index);
     #endif
     for (size_t i = 0; i < taille; i++) {
         EtatCompose ec = liste[i];
-        etat._etats = (Etat**) realloc(etat._etats, sizeof(Etat*) * ec._size);
+        etat._etats = (Etat**) realloc(etat._etats, sizeof(Etat*) * (etat._size + ec._size));
         #if DEBUG==1
-        printf("%d, ", ec._index);
+        printf("%d {", ec._index);
         #endif
-
         for (size_t j = 0; j < ec._size; j++) {
             Etat* e = ec._etats[j];
-            etat._etats[etat._size++] = e;
+            #if DEBUG==1
+            printf("%d, ", e->_index);
+            #endif
+            etat._etats[etat._size] = e;
+            etat._etats[etat._size++]->_index = e->_index;
         }
+        #if DEBUG==1
+        printf("}, ");
+        #endif
     }
     #if DEBUG==1
     printf("]\n");
     #endif
-
     return etat;
 }
 
 EtatCompose* retirer_etat_groupe(EtatCompose etat, EtatCompose* groupe, uint* taille) {
-    EtatCompose* altered_group = groupe;
+    // EtatCompose* altered_group = groupe;
     int pos = -1;
     
     // Search the position of the state to be delete
@@ -365,13 +390,14 @@ EtatCompose* retirer_etat_groupe(EtatCompose etat, EtatCompose* groupe, uint* ta
     if (pos != -1) {
         // delete the state from the groupe
         for (size_t i = pos; i < *(taille)-1; i++) {
-            altered_group[i] = altered_group[i+1];
+            groupe[i] = groupe[i+1];
         }
         *(taille) -= 1;
+        // groupe = (EtatCompose*) realloc(groupe, sizeof(EtatCompose) * *(taille));
         #if DEBUG==1
         printf("\tl'état %d a été retirer\n", etat._index);
         #endif
     }
 
-    return altered_group;
+    return groupe;
 }

@@ -24,11 +24,14 @@ bool existe_etatcompose_AFD_F(AFD automate_src, EtatCompose etatcompose_src);
 bool existe_etatcompose_liste(EtatCompose etat, EtatCompose* liste, uint taille);
 bool est_inclut_dans_groupe(EtatCompose etat, EtatCompose* groupe, uint taille);
 bool has_final_state(EtatCompose etat, AFD automate_src);
+bool is_lec_same(LEtatCompose liste1, LEtatCompose liste2);
+bool does_afdtransition_exist(AFDTransition transition, AFDTransition* liste, uint taille);
 //
 Etat* create_state();
 EtatCompose* compose_state(Etat* state);
 EtatCompose compose_state_from_group(EtatCompose* liste, uint taille);
 EtatCompose* retirer_etat_groupe(EtatCompose etat, EtatCompose* groupe, uint* taille);
 EtatCompose* get_equivalent_etatcompose_liste(EtatCompose etat, EtatCompose* liste, uint taille);
+EtatCompose* find_equivalent(EtatCompose ec_src, EtatCompose* liste, uint taille);
 
 #endif

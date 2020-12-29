@@ -665,159 +665,197 @@ AFD determiniser_AFN(AFN automate_src) {
 AFD minimiser_AFD(AFD automate_src) {
     AFD automate;
     
-    // Liste des ensembles des états (séparés)
-    EtatCompose** groupes = NULL;
-    // Taille de la liste
-    uint taille_groupes = 2;
-    // Liste des tailles des ensembles
-    uint* taille_listes = NULL;
-    // Initialisation des deux premiers ensembles
-    groupes = (EtatCompose**) malloc(sizeof(EtatCompose*) * taille_groupes);
-    groupes[0] = (EtatCompose*) malloc(sizeof(EtatCompose));
-    groupes[1] = (EtatCompose*) malloc(sizeof(EtatCompose));
-    taille_listes = (uint*) malloc(sizeof(uint) * 2);
-    taille_listes[0] = 0;
-    taille_listes[1] = 0;
-
-    // Etape 0 (séparation des états accepteurs des autres)
-    /**
-     * Pour chaque étatcomposé dans Q de l'automate, on vérifie:
-     *      si l'étatcomp est accepteur alors 
-     *          on l'ajoute dans liste[0] (etatcompose*)
-     *      sinon
-     *          on l'ajoute dans liste[1]
-     **/ 
     #if DEBUG==1
-    printf("P0: séparation entre les états accepteurs et non accepteurs\n");
+    printf("\n=================TEMP===============\n");
     #endif
+    uint temp_sets_size = 0;
+    EtatCompose** temp_sets = NULL;
+    uint* sets_sizes = NULL;
+    // 0 Equivalence: séparation des états accepteurs et non accepteurs
+    uint accepteurs_size = 0;
+    EtatCompose* accepteurs = NULL;
+    uint non_accepteurs_size = 0;
+    EtatCompose* non_accepteurs = NULL;
     for (size_t i = 0; i < automate_src.q_size; i++) {
-        EtatCompose e = automate_src.q[i];
-        // vérification si 'e' est un etat accepteur ou pas
-        if (existe_etatcompose_AFD_F(automate_src, e) == TRUE) {
-            // e est un état accepteur
-            groupes[1] = (EtatCompose*) realloc(groupes[1], sizeof(EtatCompose) * (taille_listes[1] + 1));
-            groupes[1][taille_listes[1]] = e;
-            taille_listes[1]++;
+        EtatCompose ec = automate_src.q[i];
+        if (existe_etatcompose_AFD_F(automate_src, ec) == TRUE) {
+            accepteurs = (EtatCompose*) realloc(accepteurs, sizeof(EtatCompose) * (accepteurs_size+1));
+            accepteurs[accepteurs_size++] = ec;
         } else {
-            // e n'est pas un état accepteur
-            groupes[0] = (EtatCompose*) realloc(groupes[0], sizeof(EtatCompose) * (taille_listes[0] + 1));
-            groupes[0][taille_listes[0]] = e;
-            taille_listes[0]++;
+            non_accepteurs = (EtatCompose*) realloc(non_accepteurs, sizeof(EtatCompose) * (non_accepteurs_size+1));
+            non_accepteurs[non_accepteurs_size++] = ec;
         }
     }
-
-    // Etapes k (séparation des états)
+    // ajout des listes d'états accepteur et non accepteurs dans la liste des sets
+    if (non_accepteurs_size > 0) {
+        temp_sets = (EtatCompose**) malloc(sizeof(EtatCompose*) * (temp_sets_size + 1));
+        temp_sets[temp_sets_size] = (EtatCompose*) malloc(sizeof(EtatCompose) * non_accepteurs_size);
+        sets_sizes = (uint*) malloc(sizeof(uint) * (temp_sets_size + 1));
+        sets_sizes[temp_sets_size] = non_accepteurs_size;
+        for (size_t i = 0; i < non_accepteurs_size; i++) {
+            temp_sets[temp_sets_size][i] = non_accepteurs[i];
+        }
+        temp_sets_size++;
+    }
+    if (accepteurs_size > 0) {
+        temp_sets = (EtatCompose**) realloc(temp_sets, sizeof(EtatCompose*) + (temp_sets_size + 1));
+        temp_sets[temp_sets_size] = (EtatCompose*) malloc(sizeof(EtatCompose) * accepteurs_size);
+        sets_sizes = (uint*) realloc(sets_sizes, sizeof(uint) * (temp_sets_size + 1));
+        sets_sizes[temp_sets_size] = accepteurs_size;
+        for (size_t i = 0; i < accepteurs_size; i++) {
+            temp_sets[temp_sets_size][i] = accepteurs[i];
+        }
+        temp_sets_size++;
+    }
     #if DEBUG==1
-    printf("Pk: séparation des groupes entre eux\n");
+    printf("0 équivalence est prêt!\n\tnon accepteurs: %d\n\taccepteurs: %d\n\tIl existe %d set(s)\n", non_accepteurs_size, accepteurs_size, temp_sets_size);
     #endif
-    for (size_t i = 0; i < taille_groupes; i++) {
-        EtatCompose* groupe = groupes[i];
-        uint taille_groupe = taille_listes[i];
-        if (taille_groupe > 1) {
-            for (size_t j = 0; j < taille_groupe; j++) {
-                EtatCompose etat_compose = groupe[j];
-                LEtatCompose destinations = get_destinations_from_EtatCompose_AFD(automate_src, etat_compose);
-                for (size_t y = 0; y < destinations.taille; y++) {
-                    EtatCompose dest_state = destinations.etats[y];
-                    /**
-                     * Si (dest_state) est inclut dans le groupe i, on ne fait rien
-                     * Sinon, on sépare le group i en prenant (dest_state) et l'isolant dans un autre groupe
-                     **/ 
-                    // 1ére étape: vérification si (dest_state) est inclut ou pas dans le groupe i
-                    if (est_inclut_dans_groupe(dest_state, groupe, taille_groupe) == FALSE) {
-                        // 2éme étape: Si oui, on crée un autre groupe et on l'ajoute dans la liste
-                        EtatCompose* new_group = (EtatCompose*) malloc(sizeof(EtatCompose));
-                        new_group[0] = etat_compose;
-                        groupes[taille_groupes] = new_group;
-                        taille_listes = (uint*) realloc(taille_listes, sizeof(uint) * (taille_groupes + 1));
-                        taille_listes[taille_groupes++] = 1;
-                        #if DEBUG==1
-                        printf("\tCreated a new group for state %d\n", etat_compose._index);
-                        #endif
-                        // 3éme étape: Et, on retire (etat) du groupe i
-                        groupe = retirer_etat_groupe(etat_compose, groupe, &taille_groupe);
+
+    // k Equivalences: ..
+    for (size_t i = 0; i < temp_sets_size; i++) {
+        EtatCompose* set = temp_sets[i];
+        uint set_size = sets_sizes[i];
+        LEtatCompose old_lec = {.etats=NULL, .taille=0};
+        for (size_t j = 0; j < set_size; j++) {
+            EtatCompose ec = set[j];
+            LEtatCompose new_lec = get_destinations_from_EtatCompose_AFD(automate_src, ec);
+            if (old_lec.taille != 0) {
+                // comparing old lec to new lec
+                if (is_lec_same(old_lec, new_lec) == FALSE) {
+                    // Créer un set contenant l'état ec et on l'ajoute dans la liste des sets
+                    EtatCompose* new_set = (EtatCompose*) malloc(sizeof(EtatCompose));
+                    new_set[0] = ec;
+                    
+                    temp_sets = (EtatCompose**) realloc(temp_sets, sizeof(EtatCompose*) * (temp_sets_size + 1));
+                    temp_sets[temp_sets_size] = new_set;
+                    
+                    sets_sizes = (uint*) realloc(sets_sizes, sizeof(uint) * (temp_sets_size + 1));
+                    sets_sizes [temp_sets_size++] = 1;
+                    
+                    // On retire (etat) du set courant
+                    retirer_etat_groupe(ec, set, &set_size);
+                    temp_sets[i] = (EtatCompose*) realloc(temp_sets[i], sizeof(EtatCompose) * set_size);
+                    temp_sets[i] = set;
+                    sets_sizes[i] = set_size;;
+                }
+            }
+            old_lec = new_lec;
+        }
+        #if DEBUG==1
+        printf("%ld équivalence est prêt!\n\tIl existe %d set(s)\n", (i+1), temp_sets_size);
+        printf("\tTemp Sets: ");
+        for (size_t j = 0; j < temp_sets_size; j++) {
+            EtatCompose* set = temp_sets[j];
+            uint set_size = sets_sizes[j];
+            printf("{");
+            for (size_t y = 0; y < set_size; y++) {
+                EtatCompose ec = set[y];
+                printf("%d, ", ec._index);
+            }
+            printf("}, ");
+        }
+        printf("\n");
+        #endif
+    }
+
+    // TEMP Q && TEMP S && TEMP F
+    EtatCompose* temp_q = (EtatCompose*) malloc(sizeof(EtatCompose) * temp_sets_size);
+    uint temp_q_size = temp_sets_size;
+    EtatCompose temp_s = {._size=0, ._etats = NULL, ._index=0};
+    EtatCompose* temp_f = NULL;
+    uint temp_f_size = 0;
+    for (size_t i = 0; i < temp_sets_size; i++) {
+        EtatCompose* set = temp_sets[i];
+        uint set_size = sets_sizes[i];
+        // make a new state composed of all the states in the group
+        EtatCompose new_state = compose_state_from_group(set, set_size);
+        // adding new_state to temp_q
+        temp_q[i] = new_state;
+        // if the initial state is in the set then make the set the initial state
+        if (est_inclut_dans_groupe(automate_src.s, set, set_size) == TRUE)
+            temp_s = new_state;
+        // check if in the new_state has a final state in it
+        if (has_final_state(new_state, automate_src) == TRUE) {
+            // add new_state in F
+            temp_f = (EtatCompose*) realloc(temp_f, sizeof(EtatCompose) * (temp_f_size  + 1));
+            temp_f[temp_f_size++] = new_state;
+        }
+    }
+    // TEMP SIGMA
+    AFDTransition* temp_sigma = NULL;
+    uint temp_sigma_size = 0;
+    for (size_t i = 0; i < automate_src.sigma_size; i++) {
+        AFDTransition transition = automate_src.sigma[i];
+        AFDTransition new_transition = {};
+        EtatCompose e1 = transition.e1;
+        EtatCompose e2 = transition.e2;
+        new_transition.alphabet = transition.alphabet;
+        // get the equivalent state of e1 in temp_q
+        EtatCompose* state1 = NULL;
+        for (size_t j = 0; (state1==NULL) && (j < temp_q_size); j++) {
+            EtatCompose set = temp_q[j];
+            for (size_t y = 0; (state1==NULL) && (y < e1._size); y++) {
+                for (size_t k = 0; k < set._size; k++) {
+                    if (set._etats[k]->_index == e1._etats[y]->_index) {
+                        state1 = &set;
+                        break;
                     }
                 }
             }
         }
-    }
-    #if DEBUG == 1
-    printf("\nThere are %d groupes\n", taille_groupes);
-    for (size_t i = 0; i < taille_groupes; i++) {
-        EtatCompose* groupe = groupes[i];
-        uint taille_groupe = taille_listes[i];
-        printf("GROUP %ld\n", i);
-        for (size_t j = 0; j < taille_groupe; j++) {
-            EtatCompose etat_compose = groupe[j];
-            printf("\t%d\n", etat_compose._index);
-        }
-        printf("-----------------\n");
-    }
-    #endif
-
-    // L'état initial et les ensembles des états & des états finaux & des transitions
-    automate.q = (EtatCompose*) malloc(sizeof(EtatCompose) * taille_groupes);
-    automate.q_size = 0;
-    automate.f = NULL;
-    automate.f_size = 0;
-    automate.sigma = NULL;
-    automate.sigma_size = 0;
-    for (size_t i = 0; i < taille_groupes; i++) {
-        EtatCompose* groupe = groupes[i];
-        uint taille_groupe = taille_listes[i];
-        
-        // make a new state composed of all the states in the group
-        EtatCompose new_state = compose_state_from_group(groupe, taille_groupe);
-
-        // if the initial state is in the group then make the group the initial state
-        if (est_inclut_dans_groupe(automate_src.s, groupe, taille_groupe) == TRUE) {
-            automate.s = new_state;
-        }
-
-        // add new_state in Q
-        #if DEBUG==1
-        printf("ADDING composed state to Q [");
-        for (size_t j = 0; j < new_state._size; j++) {
-            printf("%d, ", new_state._etats[j]->_index);
-        }
-        printf("]\n\n");
-        #endif
-        automate.q[automate.q_size++] = new_state;
-        
-        // check if in the new_state has a final state in it
-        if (has_final_state(new_state, automate_src) == TRUE) {
-            // add new_state in F
-            automate.f = (EtatCompose*) realloc(automate.f, sizeof(EtatCompose) * (automate.f_size  + 1));
-            automate.f[automate.f_size++] = new_state;
-        }
-    }
-
-    // transitions
-    for (size_t i = 0; i < automate.q_size; i++) {
-        EtatCompose ec = automate.q[i];
-        for (size_t j = 0; j < ec._size; j++) {
-            #if DEBUG==1
-            printf("LOOKING FOR TRANSITIONS OF %d\n", ec._etats[j]->_index);
-            #endif
-            AFDTransition** liste_transitions = get_transitions_from_AFD(automate_src, ec._etats[j]);
-            AFDTransition* current_t = NULL;
-            uint current_p = 0;
-            while ((current_t = liste_transitions[current_p++]) != NULL)
-            {
-                AFDTransition new_t;
-                new_t.alphabet = current_t->alphabet;
-                new_t.e1 = ec;
-                new_t.e2 = *get_group(current_t->e2, groupes, taille_groupes, taille_listes);
-                #if DEBUG==1
-                printf("\n");
-                printf("adding (%d, %c, %d)\n", ec._index, current_t->alphabet, current_t->e2._index);
-                #endif
-                // add new_t to sigma
-                automate.sigma = (AFDTransition*) realloc(automate.sigma, sizeof(AFDTransition) * (automate.sigma_size + 1));
-                automate.sigma[automate.sigma_size++] = new_t;
+        // get the equivalent state of e2 in temp_q
+        EtatCompose* state2 = NULL;
+        for (size_t j = 0; (state2==NULL) && (j < temp_q_size); j++) {
+            EtatCompose set = temp_q[j];
+            for (size_t y = 0; (state2==NULL) && (y < e2._size); y++) {
+                for (size_t k = 0; k < set._size; k++) {
+                    if (set._etats[k]->_index == e2._etats[y]->_index) {
+                        state2 = &set;
+                        break;
+                    }
+                }
             }
         }
+        // 
+        new_transition.e1 = *state1;
+        new_transition.e2 = *state2;
+        // check the existance of new_transition in temp_sigma
+        if (does_afdtransition_exist(new_transition, temp_sigma, temp_sigma_size) == FALSE) {
+            // add new_transition to temp_sigma
+            temp_sigma = (AFDTransition*) realloc(temp_sigma, sizeof(AFDTransition) * (temp_sigma_size + 1));
+            temp_sigma[temp_sigma_size++] = new_transition;
+        }
     }
+    #if DEBUG==1
+    printf("\n---TEMP_Q---\n\t[");
+    for (size_t i = 0; i < temp_q_size; i++) {
+        EtatCompose ec = temp_q[i];
+        printf("(%d){", ec._index);
+        for (size_t j = 0; j < ec._size; j++) {
+            printf("%d, ", ec._etats[j]->_index);
+        }
+        printf("}, ");
+    }
+    printf("]\n---TEMP_S---\n\t(%d)\n---TEMP_F---\n\t[", temp_s._index);
+    for (size_t i = 0; i < temp_q_size; i++) {
+        EtatCompose ec = temp_q[i];
+        printf("(%d), ", ec._index);
+    }
+    printf("]\n---TEMP_SIGMA---\n\t[");
+    for (size_t i = 0; i < temp_sigma_size; i++) {
+        AFDTransition transition = temp_sigma[i];
+        printf("(%d, %c, %d), ", transition.e1._index, transition.alphabet, transition.e2._index);
+    }
+    printf("]\n=================TEMP===============\n\n");
+    #endif
+    
+    automate.q = temp_q;
+    automate.q_size = temp_q_size;
+    automate.f = temp_f;
+    automate.f_size = temp_f_size;
+    automate.s = temp_s;
+    automate.sigma = temp_sigma;
+    automate.sigma_size = temp_sigma_size;
 
     return automate;
 }
