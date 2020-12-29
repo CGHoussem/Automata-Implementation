@@ -25,7 +25,11 @@ int main(int argc, char** argv)
     AFD afd_r_m = minimiser_AFD(afd_r);
     afficherAFD(afd_r_m);
 
-    // execute_AFD(afd_r, "aaaa");
+    execute_AFD(afd_r, "aaaab");
+    execute_AFD(afd_r, "baa");
+    execute_AFD(afd_r, "aaba");
+    execute_AFD(afd_r, "aaabbb");
+    execute_AFD(afd_r, "aass");
 
 
     // TODO: free automates

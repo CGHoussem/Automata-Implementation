@@ -303,6 +303,7 @@ AFN automate_kleene(AFN automate_src) {
  **/
 
 void execute_AFD(AFD automate, char* str) {
+    printf("L'exécution de l'automate avec la chaine de caractéres: %s\n", str);
     EtatCompose state = automate.s;
     bool compatible = TRUE;
     for (size_t i = 0; (compatible == TRUE) && (i < strlen(str)); i++) {
@@ -336,7 +337,7 @@ void execute_AFD(AFD automate, char* str) {
     }
     if (compatible == TRUE) {
         if (existe_etatcompose_AFD_F(automate, state) == TRUE) 
-            printf("AUTOMATE COMPATIBLE\n");
+            printf("AUTOMATE COMPATIBLE!\n");
         else {
             printf("AUTOMATE NON COMPATIBLE!\n");
             printf("> Le dernier etat n'est pas un etat accepteur!\n");
@@ -345,6 +346,7 @@ void execute_AFD(AFD automate, char* str) {
             printf("\tpos de blocage: %ld\n", strlen(str));
         }
     }
+    printf("\n\n");
 }
 
 AFD determiniser_AFN(AFN automate_src) {
