@@ -72,7 +72,7 @@ AFN automate_mot_vide() {
 
 /**
  * Cette fonction permet de renvoyer un automate
- * standard reconnaissant un mot d'un caractere donnée.
+ * standard reconnaissant un mot d'un caractere donné.
  * 
  * @param caractere: le caractere d'un mot qlcq
  * @return un AFN reconnaisant le langage vide
@@ -202,7 +202,7 @@ AFN automate_concat(AFN automate1, AFN automate2) {
     // Transitions (delta)
     automate.delta = NULL;
     automate.delta_size = 0;    
-
+    // Copie de toutes les transitions de delta1
     for (size_t i = 0; i < automate1.delta_size; i++) {
         AFNTransition t;
         t.e1 = (automate1.delta+i)->e1;
@@ -246,6 +246,15 @@ AFN automate_concat(AFN automate1, AFN automate2) {
     return automate;
 }
 
+/**
+ * Cette fonction permet de renvoyer un automate standard
+ * reconnaissant la représentation kleene étoile de l'automate
+ * passé en paramétre.
+ * 
+ * @param automate_src: L'automate source
+ * 
+ * @return L'automate reconnaissant la représentation kleene étoile
+ **/ 
 AFN automate_kleene(AFN automate_src) {
     AFN automate;
 
@@ -257,13 +266,13 @@ AFN automate_kleene(AFN automate_src) {
     // L'état initial
     automate.s = automate_src.s;
 
-    // L'ensemble des états accepteurs de l'automate
+    // L'ensemble d'états accepteurs de l'automate
     automate.f = (Etat**) malloc(sizeof(Etat*));
     automate.f_size = 1;
     *(automate.f) = automate.s;
     append_F_to_AFN(&automate, automate_src, FALSE);
 
-    // L'ensemble des transitions de l'automate
+    // L'ensemble de transitions de l'automate
     automate.delta = NULL;
     automate.delta_size = 0;
     // copie de delta de l'automate source (automate_src) dans delta de l'automate destinataire (automate)
@@ -302,6 +311,12 @@ AFN automate_kleene(AFN automate_src) {
  * ######################
  **/
 
+/**
+ * Cette fonction permet d'exécuter une chaine de caractére sur un automate AFD.
+ * 
+ * @param automate: L'automate sur lequel la chaine de caractére est executée
+ * @param str: La chaine de caractére
+ **/ 
 void execute_AFD(AFD automate, char* str) {
     printf("L'exécution de l'automate avec la chaine de caractéres: %s\n", str);
     EtatCompose state = automate.s;
@@ -349,6 +364,13 @@ void execute_AFD(AFD automate, char* str) {
     printf("\n\n");
 }
 
+/**
+ * Cette fonction permet de déterminiser un AFN et renvoyer l'AFD résultant
+ * 
+ * @param automate_src: L'automate fini non déterministe a déterminiser
+ * 
+ * @return L'automate fini déterministe
+ **/ 
 AFD determiniser_AFN(AFN automate_src) {
     AFD automate;
 
@@ -427,10 +449,7 @@ AFD determiniser_AFN(AFN automate_src) {
     printf("]\n");
     #endif
     
-    EtatCompose temp_s;
-    temp_s._etats = NULL;
-    temp_s._size = 0;
-    temp_s._index = 0;
+    EtatCompose temp_s = {._etats = NULL, ._size = 0, ._index=0};
     // trouver temp_s
     for (size_t i = 0; i < temp_q_size; i++) {
         EtatCompose ec = temp_q[i];
@@ -441,7 +460,7 @@ AFD determiniser_AFN(AFN automate_src) {
             }
         }
     }
-    // to obscure 'maybe used uninitialized' warning
+    // TODO: to look into ('maybe used uninitialized' warning)
     if (temp_s._etats == NULL){
         exit(1);
     }
@@ -536,134 +555,17 @@ AFD determiniser_AFN(AFN automate_src) {
     automate.sigma = temp_sigma;
     automate.sigma_size = temp_sigma_size;
 
-    // L'état initial
-    // automate.s = *compose_state(automate_src.s);
-    
-    // // L'ensemble des états Q
-    // automate.q_size = 1;
-    // automate.q = (EtatCompose*) malloc(sizeof(EtatCompose));
-    // *(automate.q) = automate.s;
-
-    // // L'ensemble des transitions
-    // automate.sigma = NULL;
-    // automate.sigma_size = 0;
-
-    // for (size_t i = 0; i < automate.q_size; i++) {
-    //     EtatCompose etatcomp = *(automate.q+i);
-    //     #if DEBUG==1
-    //     printf("PROCESSING Q[%ld] = %p\n", i, etatcomp._etats[0]);
-    //     #endif
-    //     EtatCompose etats_composes[ASCII_LENGTH];
-    //     for (size_t j = 0; j < ASCII_LENGTH; j++) {
-    //         etats_composes[j]._index = rand();
-    //         etats_composes[j]._etats = NULL;
-    //         etats_composes[j]._size = 0;
-    //     }
-    //     uint etats_composes_size[ASCII_LENGTH];
-    //     for (size_t j = 0; j < ASCII_LENGTH; j++)
-    //         etats_composes_size[j] = 0;
-
-    //     for (size_t j = 0; j < etatcomp._size; j++) {
-    //         Etat* state = *(etatcomp._etats+j);
-
-    //         // list of pointers to transitions
-    //         AFNTransition** transitions = get_transitions_from_AFN(automate_src, state);
-            
-    //         size_t pt = 0;
-    //         AFNTransition *t = NULL;
-
-    //         // Composer un état
-    //         while ((t = *(transitions+pt))!= NULL) {
-    //             int alpha = (int) (t->alphabet);
-    //             #if DEBUG==1
-    //             printf("\tTransition FOUND from %p to %p\t(%c)\n", state, t->e2, (char)alpha);
-    //             #endif
-    //             // compose or append the etatscompose
-    //             etats_composes[alpha]._etats = (Etat**) malloc(sizeof(Etat*) * (etats_composes_size[alpha] + 1));
-    //             etats_composes[alpha]._etats[etats_composes_size[alpha]] = t->e2;
-    //             etats_composes[alpha]._size = etats_composes_size[alpha] + 1;
-    //             etats_composes_size[alpha]++;
-
-    //             // increment for loop
-    //             pt += 1;
-    //         }
-    //         #if DEBUG==1
-    //         if (pt == 0) {
-    //             printf("\tNo transitions FOUND from %p\n", state);
-    //         }
-    //         printf("\n");
-    //         #endif
-    //     }
-
-    //     // Ajout de l'état composé s'il n'existe pas
-    //     for (size_t alpha = 0; alpha < ASCII_LENGTH; alpha++) {
-    //         if (etats_composes_size[alpha] != 0) {
-    //             EtatCompose new_etatcomp = etats_composes[alpha];    
-    //             #if DEBUG==1             
-    //             printf("Transition to (%c) composed with %d state(s)\n", (char)alpha, new_etatcomp._size);
-    //             #endif
-    //             if (existe_etatcompose_AFD_Q(automate, new_etatcomp) == FALSE) {
-    //                 // add new_etatcomp to automate.q
-    //                 #if DEBUG==1
-    //                 printf("\tAJOUT de (%p) dans Q[%d]\n", new_etatcomp._etats[0], automate.q_size);
-    //                 #endif
-    //                 automate.q = (EtatCompose*) realloc(automate.q, sizeof(EtatCompose) * (automate.q_size + 1));
-    //                 automate.q[automate.q_size++] = new_etatcomp;
-    //             }
-    //             // create a transition from 'etatcomp' to 'new_etatcomp' by 'alpha'
-    //                 AFDTransition new_t;
-    //                 new_t.e1 = etatcomp;
-    //                 new_t.e2 = new_etatcomp;
-    //                 new_t.alphabet = (char)alpha;
-    //                 #if DEBUG==1
-    //                 printf("\tAJOUT de ");
-    //                 printf("({");
-    //                 for (size_t j = 0; j < new_t.e1._size; j++) {
-    //                     printf("%d, ", new_t.e1._etats[j]->_index);
-    //                 }
-    //                 printf("}, %c, {", new_t.alphabet);
-                    
-    //                 for (size_t j = 0; j < new_t.e2._size; j++) {
-    //                     printf("%d, ", new_t.e2._etats[j]->_index);
-    //                 }
-    //                 printf("}) dans SIGMA\n");
-    //                 #endif
-
-    //                 automate.sigma = (AFDTransition*) realloc(automate.sigma, sizeof(AFDTransition) * (automate.sigma_size + 1));
-    //                 automate.sigma[automate.sigma_size] = new_t;
-    //                 automate.sigma_size++;
-    //             #if DEBUG==1
-    //             printf("\n");
-    //             #endif
-    //         }
-    //     }
-    // }
-
-    // // L'ensemble des états finaux
-    // automate.f = NULL;
-    // automate.f_size = 0;
-    // // find each composed_state in the newly created Q' and set that composed_state as a final state
-    // for (size_t i = 0; i < automate_src.f_size; i++) {
-    //     Etat* ref_state = *(automate_src.f+i);
-
-    //     for (size_t j = 0; j < automate.q_size; j++) {
-    //         EtatCompose etatcomp = *(automate.q+j);
-    //         for (size_t y = 0; y < etatcomp._size; y++) {
-    //             if (ref_state->_index == etatcomp._etats[y]->_index) {
-    //                 // add this composed state in F'
-    //                 automate.f = (EtatCompose*) realloc(automate.f, sizeof(EtatCompose) * (automate.f_size + 1));
-    //                 automate.f[automate.f_size]._index = etatcomp._index;
-    //                 automate.f[automate.f_size]._etats = etatcomp._etats;
-    //                 automate.f[automate.f_size]._size = etatcomp._size;
-    //                 automate.f_size++;
-    //             }
-    //         }
-    //     }
-    // }
-
     return automate;
 }
 
+/**
+ * Cette fonction permet de minimiser un automate fini déterministe (AFD)
+ * passé en paramétre et renvoyer l'automate résultant.
+ * 
+ * @param automate_src: L'automate a minimisé
+ * 
+ * @return L'automate minimisé
+ **/ 
 AFD minimiser_AFD(AFD automate_src) {
     AFD automate;
     

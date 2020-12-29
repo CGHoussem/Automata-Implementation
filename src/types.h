@@ -41,8 +41,8 @@ struct _AFNTransition
 
 struct _AFDTransition
 {
-    EtatCompose e1;        // L'état 1
-    EtatCompose e2;        // L'état 2
+    EtatCompose e1;         // L'état 1
+    EtatCompose e2;         // L'état 2
     char alphabet;          // L'alphabet liant les deux états
 };
 
@@ -60,10 +60,10 @@ struct _AFN
 
 struct _AFD
 {
-    EtatCompose* q;         // Ensemble fini de pointeurs d'états composés
+    EtatCompose* q;         // Ensemble fini d'états composés
     uint q_size;            // La taille de l'ensemble Q
 	EtatCompose s;          // L'état initial de l'automate
-	EtatCompose* f;         // Ensemble de pointeurs d'états composés accepteurs
+	EtatCompose* f;         // Ensemble d'états composés accepteurs
 	uint f_size;            // La taille de l'ensemble F
 
 	AFDTransition* sigma;   // Ensemble des transitions
@@ -72,8 +72,8 @@ struct _AFD
 
 struct _LEtatCompose
 {
-    EtatCompose* etats;
-    uint taille;
+    EtatCompose* etats;     // La liste d'états composés
+    uint taille;            // La taille de la liste
 };
 
 #endif

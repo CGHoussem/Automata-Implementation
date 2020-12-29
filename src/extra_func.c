@@ -3,12 +3,18 @@
 
 #include "extra_func.h"
 
+/**
+ * Cette fonction permet d'ajouter les états de l'ensemble Q d'un automate source 
+ * à l'ensemble Q d'un automate destinataire.
+ * 
+ * @param automate_dest: L'addresse de l'automate destinataire
+ * @param automate_src: L'automate source
+ * @param include_initial_state: Inclure l'état initial ou pas? 
+ **/ 
 void append_Q_to_AFN(AFN* automate_dest, AFN automate_src, bool include_initial_state) {
     if (automate_src.q == NULL)
         return;
     
-    // calcul et réallocation de la mémoire de l'ensemble Q
-
     // faire la concaténation des ensembles Q de l'automate source et l'automate destinataire
     for (size_t i = 0; i < automate_src.q_size; i++) {
         Etat* etat = *(automate_src.q+i);
@@ -21,6 +27,14 @@ void append_Q_to_AFN(AFN* automate_dest, AFN automate_src, bool include_initial_
     }
 }
 
+/**
+ * Cette fonction permet d'ajouter les états de l'ensemble F d'un automate source 
+ * à l'ensemble F d'un automate destinataire.
+ * 
+ * @param automate_dest: L'addresse de l'automate destinataire
+ * @param automate_src: L'automate source
+ * @param include_initial_state: Inclure l'état initial ou pas? 
+ **/ 
 void append_F_to_AFN(AFN* automate_dest, AFN automate_src, bool include_inital_state) {
     if (automate_src.f == NULL)
         return;
@@ -37,6 +51,13 @@ void append_F_to_AFN(AFN* automate_dest, AFN automate_src, bool include_inital_s
     }
 }
 
+/**
+ * Cette fonction permet d'ajouter la liste de transitions DELTA d'un automate source 
+ * à la liste des transitions DELTA d'un automate destinataire.
+ * 
+ * @param automate_dest: L'addresse de l'automate destinataire
+ * @param automate_src: L'automate source
+ **/ 
 void append_DELTA_to_AFN(AFN* automate_dest, AFN automate_src) {
     if (automate_src.delta == NULL)
         return;
@@ -55,6 +76,15 @@ void append_DELTA_to_AFN(AFN* automate_dest, AFN automate_src) {
     }
 }
 
+/**
+ * Cette fonction permet de renvoyer les transitions d'un AFN ayant
+ * state_src comme état source des transitions
+ * 
+ * @param automate_src: L'automate AFN source
+ * @param state_src: L'état source
+ * 
+ * @return La liste de transitions
+ **/
 AFNTransition** get_transitions_from_AFN(AFN automate_src, Etat* state_src) {
     // Cette liste devra être parcouru jusqu'a l'atteint du pointeur NULL
     AFNTransition** ret = NULL;
@@ -76,6 +106,16 @@ AFNTransition** get_transitions_from_AFN(AFN automate_src, Etat* state_src) {
     return ret;
 }
 
+/**
+ * Cette fonction permet de renvoyer les transitions d'un AFN ayant comme 
+ * état source 'state_src' et caractère 'alpha'
+ * 
+ * @param automate_src: L'automate source
+ * @param state_src: Le pointeur de l'état source des transitions
+ * @param alpha: Le caractére des transitions
+ * 
+ * @return La liste de transitions
+ **/ 
 AFNTransition** get_transitions_from_AFN_of_char(AFN automate_src, Etat* state_src, char alpha) {
     // Cette liste devra être parcouru jusqu'a l'atteint du pointeur NULL
     AFNTransition** ret = NULL;
@@ -99,6 +139,15 @@ AFNTransition** get_transitions_from_AFN_of_char(AFN automate_src, Etat* state_s
     return ret;
 }
 
+/**
+ * Cette fonction permet de renvoyer les transitions d'un AFD ayant
+ * state_src comme état source des transitions
+ * 
+ * @param automate_src: L'automate source
+ * @param state_src: L'état source
+ * 
+ * @return Liste des transitions
+ **/
 AFDTransition** get_transitions_from_AFD_EtatComp(AFD automate_src, EtatCompose state_src) {
     // Cette liste devra être parcouru jusqu'a l'atteint du pointeur NULL
     AFDTransition** ret = NULL;
@@ -120,30 +169,15 @@ AFDTransition** get_transitions_from_AFD_EtatComp(AFD automate_src, EtatCompose 
     return ret;
 }
 
-AFDTransition** get_transitions_from_AFD(AFD automate_src, Etat* state_src) {
-    // Cette liste devra être parcouru jusqu'a l'atteint du pointeur NULL
-    AFDTransition** ret = NULL;
-    uint ret_size = 0;
-
-    for (size_t i = 0; i < automate_src.sigma_size; i++) {
-        AFDTransition t = automate_src.sigma[i];
-        EtatCompose ec = t.e1;
-        for (size_t j = 0; j < ec._size; j++) {
-            Etat* e = ec._etats[j];
-            if (e->_index == state_src->_index) {
-                ret = (AFDTransition**) realloc(ret, sizeof(AFDTransition*) * (ret_size + 1));
-                ret[ret_size++] = (automate_src.sigma+i);
-            }
-        }
-    }
-
-    // La fin de la liste
-    ret = (AFDTransition**) realloc(ret, sizeof(AFDTransition*) * (ret_size + 1));
-    *(ret+ret_size) = NULL;
-
-    return ret;
-}
-
+/**
+ * Cette fonction permet de renvoyer une liste d'états composés destinataires
+ * d'un état composé et d'un AFD passés en paramétre
+ * 
+ * @param automate_src: Un automate fini déterministe
+ * @param etatcompose_src: L'état composé source
+ * 
+ * @return Liste d'états composés
+ **/ 
 LEtatCompose get_destinations_from_EtatCompose_AFD(AFD automate_src, EtatCompose etatcompose_src) {
     LEtatCompose liste;
     liste.etats = NULL;
@@ -160,23 +194,11 @@ LEtatCompose get_destinations_from_EtatCompose_AFD(AFD automate_src, EtatCompose
     return liste;
 }
 
-EtatCompose* get_group(EtatCompose etat, EtatCompose** groupes, uint taille_groupes, uint* taille_listes) {
-    for (size_t i = 0; i < taille_groupes; i++) {
-        EtatCompose* group = groupes[i];
-        uint taille = taille_listes[i];
-        #if DEBUG==1
-        printf("search if %d in %d\n", etat._index, group->_index);
-        #endif
-        if (est_inclut_dans_groupe(etat, group, taille) == TRUE) {
-            #if DEBUG==1
-            printf("\tfound in %d\n", group->_index);
-            #endif
-            return group;
-        }
-    }
-    return NULL;    
-}
-
+/**
+ * Cette fonction permet de créer un état et retourne son pointeur.
+ * 
+ * @return Pointeur vers l'état crée.
+ **/ 
 Etat* create_state() {
     Etat* state = (Etat*) malloc(sizeof(Etat));
     state->_index = rand();
@@ -184,6 +206,15 @@ Etat* create_state() {
     return state;
 }
 
+/**
+ * Cette fonction permet de vérifier si un état donné est
+ * un état accepteur d'un automate donné ou pas.
+ * 
+ * @param automate_src: L'automate source
+ * @param etat: Le pointeur de l'état à vérifier
+ * 
+ * @return Si l'état est accepteur ou pas?
+ **/ 
 bool is_state_final(AFN automate_src, Etat* etat) {
     for (size_t i = 0; i < automate_src.f_size; i++) {
         Etat* state = *(automate_src.f+i);
@@ -193,6 +224,15 @@ bool is_state_final(AFN automate_src, Etat* etat) {
     return FALSE;
 }
 
+/**
+ * Cette fonction permet de vérifier et renvoyer si un état composé passé
+ * en paramétre existe dans l'ensemble d'états d'un AFD ou pas
+ * 
+ * @param automate_src: L'automate source (AFD)
+ * @param etats_src: L'état composé à vérifier
+ * 
+ * @return Une valeur booléene qui détermine si l'état existe ou pas
+ **/ 
 bool existe_etatcompose_AFD_Q(AFD automate_src, EtatCompose etats_src) {
     if (automate_src.q_size <= 0)
         return FALSE;
@@ -219,6 +259,16 @@ bool existe_etatcompose_AFD_Q(AFD automate_src, EtatCompose etats_src) {
     return FALSE;
 }
 
+/**
+ * Cette fonction permet de renvoyer si un état passé en paramétre 
+ * existe dans l'ensemble d'états accepteurs d'un automate passé en paramétre ou pas
+ * 
+ * @param automate_src: L'automate source
+ * @param etatcompose_src: L'état source
+ * 
+ * @return une valeur booléene qui détermine si l'état source existe dans l'ensemble
+ * d'états accepteurs de l'automate source ou pas
+ **/ 
 bool existe_etatcompose_AFD_F(AFD automate_src, EtatCompose etatcompose_src) {
     if (automate_src.f_size == 0)
         return FALSE;
@@ -232,6 +282,16 @@ bool existe_etatcompose_AFD_F(AFD automate_src, EtatCompose etatcompose_src) {
     return FALSE;
 }
 
+/**
+ * Cette fonction permet de vérifier et renvoyer si un état composé passé en paramétre
+ * existe dans une liste d'états composés ou pas
+ * 
+ * @param etat: L'etat composé source
+ * @param liste: La liste d'états composés
+ * @param taille: La taille de la liste
+ * 
+ * @return Une valeur booléene permet de déterminer si l'état existe ou pas
+ **/
 bool existe_etatcompose_liste(EtatCompose etat, EtatCompose* liste, uint taille) {
     if (taille == 0)
         return FALSE;
@@ -258,6 +318,16 @@ bool existe_etatcompose_liste(EtatCompose etat, EtatCompose* liste, uint taille)
     return FALSE;
 }
 
+/**
+ * Cette fonction permet de renvoyer l'état composé équivalente à un état composé 
+ * dans une liste d'états.
+ * 
+ * @param etat: L'état composé référante
+ * @param liste: La liste d'états composé
+ * @param taille: La taille de la liste
+ * 
+ * @return Le pointeur vers l'état composé
+ **/ 
 EtatCompose* get_equivalent_etatcompose_liste(EtatCompose etat, EtatCompose* liste, uint taille) {
     if (taille == 0)
         return NULL;
@@ -284,6 +354,16 @@ EtatCompose* get_equivalent_etatcompose_liste(EtatCompose etat, EtatCompose* lis
     return NULL;
 }
 
+/**
+ * Cette fonction permet de renvoyer si un état composé passé en paramétre 
+ * existe dans une liste d'états composé ou pas.
+ * 
+ * @param etat: L'état composé à vérifier
+ * @param groupe: La liste d'états composés
+ * @param taille: La taille de la liste
+ * 
+ * @return Une valeur booléene qui permet de déterminer si l'état existe ou pas
+ **/ 
 bool est_inclut_dans_groupe(EtatCompose etat, EtatCompose* groupe, uint taille) {
     for (size_t i = 0; i < taille; i++) {
         EtatCompose e = groupe[i];
@@ -294,6 +374,16 @@ bool est_inclut_dans_groupe(EtatCompose etat, EtatCompose* groupe, uint taille) 
     return FALSE;
 }
 
+/**
+ * Cette fonction permet de déterminer et renvoyer si un état composé passé
+ * en paramétre a un état accepteur d'un AFD passé en paramétre ou pas
+ * 
+ * @param etat: L'état composé source
+ * @param automate_src: L'automate source
+ * 
+ * @return Une valeur booléene qui permet de déterminer s'il existe un état 
+ * accepteur dans l'état composé source ou pas 
+ **/ 
 bool has_final_state(EtatCompose etat, AFD automate_src) {
     for (size_t i = 0; i < automate_src.f_size; i++) {
         EtatCompose ec_src = automate_src.f[i];
@@ -310,6 +400,15 @@ bool has_final_state(EtatCompose etat, AFD automate_src) {
     return FALSE;
 }
 
+/**
+ * Cette fonction permet de déterminier si deux listes d'états  
+ * composés passés en paramétres sont pareils ou pas
+ * 
+ * @param liste1: Liste d'état composé
+ * @param liste2: Liste d'état composé
+ * 
+ * @return Une valeur booléene qui détermine si ces deux listes sont pareils ou pas
+ **/ 
 bool is_lec_same(LEtatCompose liste1, LEtatCompose liste2) {
     if (liste1.taille != liste2.taille)
         return FALSE;
@@ -320,6 +419,16 @@ bool is_lec_same(LEtatCompose liste1, LEtatCompose liste2) {
     return TRUE;
 }
 
+/**
+ * Cette fonction permet de vérifier si une transition AFD existe dans une liste 
+ * de transitions passé en paramétre ou pas
+ * 
+ * @param transition_src: La transition esource
+ * @param liste: La liste de transitions
+ * @param taille: La taille de la liste
+ * 
+ * @return Une valeur booléene qui permet de vérifier si la transition existe ou pas
+ **/ 
 bool does_afdtransition_exist(AFDTransition transition_src, AFDTransition* liste, uint taille) {
     if (taille <= 0 || liste == NULL) return FALSE;
     for (size_t i = 0; i < taille; i++) {
@@ -334,6 +443,14 @@ bool does_afdtransition_exist(AFDTransition transition_src, AFDTransition* liste
     return FALSE;
 }
 
+/**
+ * Cette fonction permet de construire un état composé 
+ * à partir d'un état passé en paramétre
+ * 
+ * @param state: L'état
+ * 
+ * @return Un état composé
+ **/
 EtatCompose* compose_state(Etat* state) {
     if (state == NULL)
         return NULL;
@@ -345,6 +462,15 @@ EtatCompose* compose_state(Etat* state) {
     return etat_s;
 }
 
+/**
+ * Cette fonction permet de construire un état composé
+ * à partir d'une liste d'états composés passé en paramétre
+ * 
+ * @param liste: La liste d'états composé
+ * @param taille: La taille de la liste
+ * 
+ * @return L'état composé
+ **/ 
 EtatCompose compose_state_from_group(EtatCompose* liste, uint taille) {
     EtatCompose etat = {._index = rand(), ._size = 0, ._etats = NULL};
 
@@ -375,6 +501,15 @@ EtatCompose compose_state_from_group(EtatCompose* liste, uint taille) {
     return etat;
 }
 
+/**
+ * Cette fonction permet de retirer un état composé d'une liste d'états composés.
+ * 
+ * @param etat: L'état a retirer
+ * @param groupe: Le pointeur vers la liste d'états composés
+ * @param taille: Le pointeur vers la taille de la liste
+ * 
+ * @return La liste 
+ **/ 
 EtatCompose* retirer_etat_groupe(EtatCompose etat, EtatCompose* groupe, uint* taille) {
     // EtatCompose* altered_group = groupe;
     int pos = -1;

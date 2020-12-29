@@ -13,9 +13,7 @@ void append_DELTA_to_AFN(AFN* automate_dest, AFN automate_src);
 AFNTransition** get_transitions_from_AFN(AFN automate_src, Etat* state_src);
 AFNTransition** get_transitions_from_AFN_of_char(AFN automate_src, Etat* state_src, char alpha);
 AFDTransition** get_transitions_from_AFD_EtatComp(AFD automate_src, EtatCompose state_src);
-AFDTransition** get_transitions_from_AFD(AFD automate_src, Etat* state_src);
 LEtatCompose get_destinations_from_EtatCompose_AFD(AFD automate_src, EtatCompose etatcompose_src);
-EtatCompose* get_group(EtatCompose etat, EtatCompose** groupes, uint taille_groupes, uint* taille_listes);
 
 //
 bool is_state_final(AFN automate_src, Etat* etat);
