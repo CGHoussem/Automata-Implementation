@@ -780,7 +780,10 @@ void afficherAFN(AFN automate) {
     printf("Q = {");
     for (i = 0; i < automate.q_size; i++) {
         Etat* e = *(automate.q+i);
-        printf("%d, ", e->_index);
+        if (i + 1 >= automate.q_size)
+            printf("%d", e->_index);
+        else
+            printf("%d, ", e->_index);
     }
     printf("}\n");
 
@@ -789,17 +792,20 @@ void afficherAFN(AFN automate) {
     printf("F = {");
     for (i = 0; i < automate.f_size; i++) {
         Etat* e = *(automate.f+i);
-        printf("%d, ", e->_index);
+        if (i + 1 >= automate.f_size)
+            printf("%d", e->_index);
+        else
+            printf("%d, ", e->_index);
     }
     printf("}\n");
 
-    printf("delta = {");
+    printf("delta = {\n");
     for (i = 0; i < automate.delta_size; i++) {
         Etat* e1 = (automate.delta+i)->e1;
         Etat* e2 = (automate.delta+i)->e2;
         char alpha = (automate.delta+i)->alphabet;
         
-        printf("(%d, %c, %d), ", e1->_index, alpha, e2->_index);
+        printf("\t(%d -> %c -> %d)\n", e1->_index, alpha, e2->_index);
     }
     printf("}\n\n");
 }
@@ -809,7 +815,10 @@ void afficherAFD(AFD automate) {
     printf("Q' = {");
     for (size_t i = 0; i < automate.q_size; i++) {
         EtatCompose etatcomp = automate.q[i];
-        printf("%d, ", etatcomp._index);
+        if (i + 1 >= automate.q_size)
+            printf("%d", etatcomp._index);
+        else
+            printf("%d, ", etatcomp._index);
     }
     printf("}\n");
 
@@ -818,17 +827,20 @@ void afficherAFD(AFD automate) {
     printf("F' = {");
     for (size_t i = 0; i < automate.f_size; i++) {
         EtatCompose etatcomp = automate.f[i];
-        printf("%d, ", etatcomp._index);
+        if (i + 1 >= automate.f_size)
+            printf("%d", etatcomp._index);
+        else
+            printf("%d, ", etatcomp._index);
     }
     printf("}\n");
 
-    printf("sigma = {");
+    printf("sigma = {\n");
     for (i = 0; i < automate.sigma_size; i++) {
         EtatCompose e1 = (automate.sigma+i)->e1;
         EtatCompose e2 = (automate.sigma+i)->e2;
         char alpha = (automate.sigma+i)->alphabet;
         
-        printf("(%d, %c, %d), ", e1._index, alpha, e2._index);
+        printf("\t(%d -> %c -> %d)\n", e1._index, alpha, e2._index);
     }
     printf("}\n\n");
 }

@@ -31,7 +31,6 @@ int main(int argc, char** argv)
     execute_AFD(afd_r, "aaabbb");
     execute_AFD(afd_r, "aass");
 
-
     // TODO: free automates
 
     return EXIT_SUCCESS;
